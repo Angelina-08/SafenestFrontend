@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -81,26 +81,12 @@ interface House {
 export const Dashboard: React.FC = () => {
   const [houses, setHouses] = useState<House[]>([]);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [error, setError] = useState<string>('');
+  const [, setError] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!authLoading) {
-      if (!user?.emailVerified) {
-        navigate('/verify-email');
-        return;
-      }
-      if (!user) {
-        navigate('/login');
-        return;
-      }
-      fetchHouses();
-    }
-  }, [user, authLoading, navigate]);
-
-  const fetchHouses = async () => {
+  const fetchHouses = useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
@@ -120,7 +106,21 @@ export const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
+
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user?.emailVerified) {
+        navigate('/verify-email');
+        return;
+      }
+      if (!user) {
+        navigate('/login');
+        return;
+      }
+      fetchHouses();
+    }
+  }, [user, authLoading, navigate, fetchHouses]);
 
   const handleCreateHouse = async (name: string, imageUrl: string) => {
     try {
