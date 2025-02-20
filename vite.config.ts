@@ -9,6 +9,14 @@ export default defineConfig({
   base: '/',
   build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'styled': ['styled-components', '@radix-ui/colors']
+        }
+      }
+    }
   }
 });
