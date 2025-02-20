@@ -214,7 +214,7 @@ export const HouseSettings: React.FC<Props> = ({
   const [showImageGrid, setShowImageGrid] = useState(false);
   const [selectedImage, setSelectedImage] = useState(house.homeImage);
 
-  const pexelsClient = createClient(import.meta.env.VITE_PEXELS_API);
+  const pexelsClient = createClient(process.env.REACT_APP_PEXELS_API_KEY || '');
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;

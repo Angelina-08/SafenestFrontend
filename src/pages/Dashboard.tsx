@@ -199,38 +199,37 @@ export const Dashboard: React.FC = () => {
 
   return (
     <Container>
-      <TopBar firstName={user?.firstName} showAvatar={!!user} />
+      <TopBar 
+        firstName={user?.firstName}
+        showAvatar={true}
+      />
       <Content>
-        {error && (
-          <div style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>
-        )}
         <HousesGrid>
           {loading ? (
             renderSkeletons()
-          ) : houses.length === 0 ? (
-            <div>No houses found</div>
           ) : (
-            houses.map(house => (
-              <HouseCard
-                key={house.homeId}
-                house={house}
-                currentUserId={user?.email || ''}
-                onUpdateHouse={handleUpdateHouse}
-              />
-            ))
+            <>
+              {houses.map((house) => (
+                <HouseCard
+                  key={house.homeId}
+                  house={house}
+                  currentUserId={user?.email || ''}
+                  onUpdateHouse={handleUpdateHouse}
+                />
+              ))}
+              <AddHouseCard onClick={() => setShowCreateDialog(true)}>
+                <span>+ Add House</span>
+              </AddHouseCard>
+            </>
           )}
-          <AddHouseCard onClick={() => setShowCreateDialog(true)}>
-            <span style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>+</span>
-            <span>Add House</span>
-          </AddHouseCard>
         </HousesGrid>
-      </Content>
 
-      <CreateHouseDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
-        onCreateHouse={handleCreateHouse}
-      />
+        <CreateHouseDialog
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+          onCreateHouse={handleCreateHouse}
+        />
+      </Content>
     </Container>
   );
 };

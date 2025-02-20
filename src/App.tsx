@@ -13,6 +13,8 @@ import {
   redDark,
 } from '@radix-ui/colors';
 import { AuthProvider } from './context/AuthContext';
+import { Suspense } from 'react';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const GlobalStyle = createGlobalStyle`
   :root {
@@ -37,20 +39,36 @@ const GlobalStyle = createGlobalStyle`
   }
 `;
 
+const LoadingFallback = () => (
+  <div style={{ 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    height: '100vh' 
+  }}>
+    Loading...
+  </div>
+);
+
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <GlobalStyle />
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/verify-email" element={<EmailVerification />} />
-          <Route path="/" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </Router>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <Router>
+          <GlobalStyle />
+          <Suspense fallback={<LoadingFallback />}>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/verify-email" element={<EmailVerification />} />
+              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </Suspense>
+        </Router>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

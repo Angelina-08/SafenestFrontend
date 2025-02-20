@@ -24,7 +24,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const interceptorRef = useRef<number>();
+  const interceptorRef = useRef<number | undefined>(undefined);
 
   // Set up axios interceptor for token
   useEffect(() => {

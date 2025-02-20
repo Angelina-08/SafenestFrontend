@@ -210,14 +210,18 @@ export const EmailVerification = () => {
       <Card>
         <Title>Email Verification</Title>
         <Subtitle>
-          Please enter the 6-digit code sent to your email
+          Please enter the verification code sent to your email address.
         </Subtitle>
-        
+
         <CodeInputContainer>
           {code.map((digit, index) => (
             <CodeInput
               key={index}
-              ref={el => inputs.current[index] = el}
+              ref={(el) => {
+                if (inputs.current) {
+                  inputs.current[index] = el;
+                }
+              }}
               type="text"
               maxLength={1}
               value={digit}
@@ -228,7 +232,7 @@ export const EmailVerification = () => {
           ))}
         </CodeInputContainer>
 
-        <SubmitButton 
+        <SubmitButton
           onClick={handleSubmit}
           disabled={code.some(digit => !digit) || isSubmitting}
         >
@@ -239,11 +243,13 @@ export const EmailVerification = () => {
           onClick={handleResendCode}
           disabled={countdown > 0 || isLoading}
         >
-          {isLoading ? <LoadingSpinner /> : 
-            countdown > 0 
-              ? `Resend code in ${countdown}s` 
-              : 'Resend verification code'
-          }
+          {isLoading ? (
+            <LoadingSpinner />
+          ) : countdown > 0 ? (
+            `Resend code in ${countdown}s`
+          ) : (
+            'Resend code'
+          )}
         </ResendButton>
 
         {error && <ErrorMessage>{error}</ErrorMessage>}

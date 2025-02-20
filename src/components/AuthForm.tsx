@@ -149,23 +149,17 @@ const StyledLink = styled(Link)`
   transition: color 0.2s;
   text-align: left;
   display: block;
-  margin-bottom: 1rem;
-  
+
   &:hover {
     color: #1a1a1a;
     text-decoration: underline;
   }
 `;
 
-const StyledErrorMessage = styled.div`
-  color: var(--red-11, #e11d48);
-  font-size: 0.875rem;
-  text-align: center;
+const ErrorMessage = styled.div`
+  color: #dc3545;
   margin-bottom: 1rem;
-  padding: 0.5rem;
-  background-color: var(--red-2, #fff1f2);
-  border-radius: 4px;
-  border: 1px solid var(--red-6, #fda4af);
+  font-size: 0.875rem;
 `;
 
 interface RootProps {
@@ -180,7 +174,7 @@ interface SubmitButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement
 }
 
 const Submit = ({ loading, children, disabled, ...props }: SubmitButtonProps) => (
-  <StyledButton type="submit" disabled={loading || disabled} $loading={loading} {...props}>
+  <StyledButton type="submit" disabled={disabled || loading} $loading={loading} {...props}>
     {loading && <Spinner />}
     {children}
   </StyledButton>
@@ -189,7 +183,9 @@ const Submit = ({ loading, children, disabled, ...props }: SubmitButtonProps) =>
 export const AuthForm = {
   Root: ({ children, ...props }: RootProps) => (
     <FormWrapper>
-      <StyledFormRoot {...props}>{children}</StyledFormRoot>
+      <StyledFormRoot {...props}>
+        {children}
+      </StyledFormRoot>
     </FormWrapper>
   ),
   Field: StyledField,
@@ -200,5 +196,5 @@ export const AuthForm = {
   Submit,
   Link: StyledLink,
   Title: StyledTitle,
-  ErrorMessage: StyledErrorMessage
+  ErrorMessage
 };

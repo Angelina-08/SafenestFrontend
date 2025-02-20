@@ -105,7 +105,7 @@ export const TopBar = ({ firstName, showAvatar = false }: TopBarProps) => {
             <AvatarContainer>
               <StyledAvatar>
                 <StyledAvatarFallback>
-                  {firstName?.charAt(0).toUpperCase()}
+                  {firstName ? firstName[0].toUpperCase() : 'U'}
                 </StyledAvatarFallback>
               </StyledAvatar>
             </AvatarContainer>
@@ -114,7 +114,7 @@ export const TopBar = ({ firstName, showAvatar = false }: TopBarProps) => {
           <DropdownMenu.Portal>
             <DropdownContent>
               <DropdownItem onClick={handleLogout}>
-                <ExitIcon style={{ color: '#e11d48' }} />
+                <ExitIcon />
                 Logout
               </DropdownItem>
             </DropdownContent>
