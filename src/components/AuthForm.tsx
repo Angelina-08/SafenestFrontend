@@ -157,15 +157,6 @@ const StyledLink = styled(Link)`
   }
 `;
 
-const LinkContainer = styled.div`
-  margin-bottom: 1.5rem;
-  text-align: left;
-  
-  & > * + * {
-    margin-top: 0.5rem;
-  }
-`;
-
 const StyledErrorMessage = styled.div`
   color: var(--red-11, #e11d48);
   font-size: 0.875rem;

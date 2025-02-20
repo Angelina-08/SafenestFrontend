@@ -47,16 +47,11 @@ const Content = styled.div`
   padding: 1rem;
 `;
 
-const Title = styled.h3`
+const Name = styled.h3`
   margin: 0;
   font-size: 1.25rem;
+  font-weight: 600;
   color: var(--gray-12);
-`;
-
-const Owner = styled.p`
-  margin: 0.5rem 0 0;
-  font-size: 0.875rem;
-  color: var(--gray-11);
 `;
 
 const ContextMenuItem = styled(ContextMenu.Item)`
@@ -93,7 +88,7 @@ export const HouseCard: React.FC<HouseCardProps> = ({
           <Card>
             <Image src={house.homeImage} alt={house.homeName} />
             <Content>
-              <Title>{house.homeName}</Title>
+              <Name>{house.homeName}</Name>
             </Content>
           </Card>
         </ContextMenu.Trigger>

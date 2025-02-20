@@ -17,15 +17,6 @@ const Container = styled.div`
   background: var(--gray-2);
 `;
 
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background: white;
-  border-bottom: 1px solid var(--gray-6);
-`;
-
 const Content = styled.div`
   max-width: 1200px;
   margin: 0 auto;
@@ -37,13 +28,6 @@ const HousesGrid = styled.div`
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1rem;
   padding: 1rem;
-`;
-
-const SkeletonGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 2rem;
-  padding: 2rem;
 `;
 
 const AddHouseCard = styled.div`

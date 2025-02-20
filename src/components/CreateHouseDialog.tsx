@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Form from '@radix-ui/react-form';
-import { createClient, Photos, ErrorResponse } from 'pexels';
+import { createClient, Photos } from 'pexels';
 import { Cross2Icon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import { Button } from './Button';
 

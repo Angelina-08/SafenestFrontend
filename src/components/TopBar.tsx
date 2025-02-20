@@ -1,4 +1,3 @@
-import React from 'react';
 import styled from 'styled-components';
 import * as Avatar from '@radix-ui/react-avatar';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
