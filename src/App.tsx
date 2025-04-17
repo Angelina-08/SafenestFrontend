@@ -3,6 +3,8 @@ import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 import { Dashboard } from './pages/Dashboard';
 import { EmailVerification } from './pages/EmailVerification';
+import { CameraView } from './pages/CameraView';
+import { CameraDetail } from './pages/CameraDetail';
 import { createGlobalStyle } from 'styled-components';
 import {
   gray,
@@ -62,6 +64,8 @@ function App() {
               <Route path="/signup" element={<Signup />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/verify-email" element={<EmailVerification />} />
+              <Route path="/house/:homeId" element={<CameraView />} />
+              <Route path="/camera/:cameraId" element={<CameraDetail />} />
               <Route path="/" element={<Navigate to="/login" replace />} />
               <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>

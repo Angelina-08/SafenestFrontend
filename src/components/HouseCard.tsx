@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import { GearIcon } from '@radix-ui/react-icons';
 import { HouseSettings } from './HouseSettings';
+import { useNavigate } from 'react-router-dom';
 
 interface Permission {
   email: string;
@@ -80,12 +81,17 @@ export const HouseCard: React.FC<HouseCardProps> = ({
 }) => {
   const [showSettings, setShowSettings] = useState(false);
   const isOwner = house.homeOwner === currentUserId;
+  const navigate = useNavigate();
+
+  const handleCardClick = () => {
+    navigate(`/house/${house.homeId}`);
+  };
 
   return (
     <>
       <ContextMenu.Root>
         <ContextMenu.Trigger>
-          <Card>
+          <Card onClick={handleCardClick}>
             <Image src={house.homeImage} alt={house.homeName} />
             <Content>
               <Name>{house.homeName}</Name>
