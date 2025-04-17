@@ -1,7 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import styled from 'styled-components';
 import { Button } from './Button';
 import { PlayIcon, PauseIcon, ReloadIcon } from '@radix-ui/react-icons';
+import axios from 'axios';
+
+const API_BASE_URL = 'https://safe-nest-back-end.vercel.app';
 
 const PlayerContainer = styled.div`
   width: 100%;
@@ -81,73 +84,122 @@ const Spinner = styled.div`
 
 interface CameraPlayerProps {
   rtspUrl: string;
+  cameraId: number;
 }
 
-export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl }) => {
+export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [streamInfo, setStreamInfo] = useState<{ streamId: string, streamUrl: string } | null>(null);
 
-  useEffect(() => {
-    // Reset state when URL changes
-    setIsLoading(true);
-    setError(null);
-    setIsPlaying(false);
-    
-    if (videoRef.current) {
-      videoRef.current.src = '';
-    }
-
-    // In a real implementation, you would use a library like JSMpeg, node-rtsp-stream, or a service
-    // like WebRTC to handle RTSP streams in the browser.
-    // For this example, we'll simulate the process with a timeout
-
-    const loadTimeout = setTimeout(() => {
-      // In a real implementation, this is where you would initialize the RTSP player
-      // For now, we'll just simulate success or failure
+  // Start stream when component mounts or when play is clicked
+  const startStream = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
       
-      if (rtspUrl.includes('error')) {
-        setError('Failed to connect to camera stream. Please check the RTSP URL and try again.');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Authentication error. Please log in again.');
         setIsLoading(false);
-      } else {
-        setIsLoading(false);
-        // Auto-play would happen here in a real implementation
+        return;
       }
-    }, 2000);
 
+      // Request stream from backend
+      const response = await axios.post(
+        `${API_BASE_URL}/api/camera/stream/start`,
+        { cameraId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setStreamInfo(response.data);
+      setIsPlaying(true);
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error starting stream:', error);
+      setError('Failed to start camera stream. Please try again.');
+      setIsLoading(false);
+    }
+  }, [cameraId]);
+
+  // Stop stream when component unmounts or when pause is clicked
+  const stopStream = useCallback(async () => {
+    if (!streamInfo) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      // Request stream termination from backend
+      await axios.post(
+        `${API_BASE_URL}/api/camera/stream/stop`,
+        { streamId: streamInfo.streamId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setIsPlaying(false);
+      setStreamInfo(null);
+      
+      // Clear the image
+      if (imgRef.current) {
+        imgRef.current.src = '';
+      }
+    } catch (error) {
+      console.error('Error stopping stream:', error);
+      // Even if there's an error, we still want to update the UI
+      setIsPlaying(false);
+    }
+  }, [streamInfo]);
+
+  // Start/stop stream based on isPlaying state
+  useEffect(() => {
+    if (isPlaying && !streamInfo) {
+      startStream();
+    }
+    
     return () => {
-      clearTimeout(loadTimeout);
+      // Clean up stream when component unmounts
+      if (streamInfo) {
+        stopStream();
+      }
     };
-  }, [rtspUrl]);
+  }, [isPlaying, streamInfo, cameraId, startStream, stopStream]);
 
   const handlePlay = () => {
     setIsPlaying(true);
-    // In a real implementation, you would start the stream here
   };
 
   const handlePause = () => {
-    setIsPlaying(false);
-    // In a real implementation, you would pause the stream here
+    stopStream();
   };
 
   const handleReload = () => {
-    setIsLoading(true);
-    setError(null);
-    setIsPlaying(false);
-    
-    // Simulate reloading
+    if (streamInfo) {
+      stopStream();
+    }
     setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
+      startStream();
+    }, 500);
   };
 
   return (
     <PlayerContainer>
-      <VideoElement 
-        ref={videoRef}
-        playsInline
-      />
+      {streamInfo ? (
+        <img 
+          ref={imgRef}
+          src={streamInfo.streamUrl}
+          alt="Camera Stream"
+          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+        />
+      ) : (
+        <VideoElement 
+          ref={videoRef}
+          playsInline
+        />
+      )}
       
       {isLoading && (
         <LoadingOverlay>

@@ -210,7 +210,7 @@ export const CameraDetail: React.FC = () => {
         </Header>
 
         <PlayerSection>
-          <CameraPlayer rtspUrl={camera.cameraAddress} />
+          <CameraPlayer rtspUrl={camera.cameraAddress} cameraId={camera.cameraId} />
         </PlayerSection>
 
         <CameraInfo>
