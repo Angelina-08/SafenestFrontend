@@ -41,6 +41,39 @@ const NotificationDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const { getNotificationById, markAsResolved, markAsFalseAlarm } = useNotifications();
 
+  // Disable the polling when viewing a notification detail
+  useEffect(() => {
+    // Store original window.fetch to restore it later
+    const originalFetch = window.fetch;
+    
+    // Override fetch to block API calls to the notifications endpoint
+    window.fetch = function(input, init) {
+      const url = typeof input === 'string' 
+        ? input 
+        : input instanceof URL 
+          ? input.href 
+          : input instanceof Request 
+            ? input.url 
+            : '';
+      
+      if (url.includes('/api/notifications') && !url.includes(`/api/notifications/${id}`)) {
+        // Block the polling fetch requests
+        return Promise.resolve(new Response(JSON.stringify({ notifications: [] }), { 
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        }));
+      }
+      
+      // Allow all other fetch requests to proceed normally
+      return originalFetch.apply(this, [input, init]);
+    };
+    
+    // Cleanup: restore original fetch when component unmounts
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, [id]);
+
   useEffect(() => {
     const fetchNotification = async () => {
       if (!id) return;
