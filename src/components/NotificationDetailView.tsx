@@ -135,7 +135,8 @@ export const NotificationDetailView: React.FC<NotificationDetailViewProps> = ({
             <img
               src={notification.blob_url}
               alt={`Alert at ${notification.camera_name || 'camera'} on ${format(new Date(notification.timestamp), 'PP')}`}
-              className="object-contain w-full h-auto" // Explicitly set height to auto
+              // Removed Tailwind classes, using inline styles for responsive fit
+              style={{ display: 'block', maxWidth: '100%', height: 'auto' }}
             />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-500">
