@@ -39,40 +39,15 @@ const NotificationDetail: React.FC = () => {
   const navigate = useNavigate();
   const [notification, setNotification] = useState<Notification | null>(null);
   const [loading, setLoading] = useState(true);
-  const { getNotificationById, markAsResolved, markAsFalseAlarm } = useNotifications();
+  const { getNotificationById, markAsResolved, markAsFalseAlarm, pausePolling, resumePolling } = useNotifications();
 
-  // Disable the polling when viewing a notification detail
+  // Pause polling when component mounts and resume when it unmounts
   useEffect(() => {
-    // Store original window.fetch to restore it later
-    const originalFetch = window.fetch;
-    
-    // Override fetch to block API calls to the notifications endpoint
-    window.fetch = function(input, init) {
-      const url = typeof input === 'string' 
-        ? input 
-        : input instanceof URL 
-          ? input.href 
-          : input instanceof Request 
-            ? input.url 
-            : '';
-      
-      if (url.includes('/api/notifications') && !url.includes(`/api/notifications/${id}`)) {
-        // Block the polling fetch requests
-        return Promise.resolve(new Response(JSON.stringify({ notifications: [] }), { 
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        }));
-      }
-      
-      // Allow all other fetch requests to proceed normally
-      return originalFetch.apply(this, [input, init]);
-    };
-    
-    // Cleanup: restore original fetch when component unmounts
+    pausePolling(); // Pause polling when entering the detail page
     return () => {
-      window.fetch = originalFetch;
+      resumePolling(); // Resume polling when leaving the detail page
     };
-  }, [id]);
+  }, [pausePolling, resumePolling]); // Dependencies
 
   useEffect(() => {
     const fetchNotification = async () => {
@@ -123,35 +98,48 @@ const NotificationDetail: React.FC = () => {
             </div>
           </div>
         ) : notification ? (
-          <div>
-            <h1 className="text-2xl font-bold mb-2">
-              Alert Detected at {notification.home_name}
-            </h1>
-            <p className="text-gray-600 mb-6">
-              Camera: {notification.camera_name} • 
-              {format(new Date(notification.timestamp), 'PPpp')}
-            </p>
-
-            <div className="mb-8 relative h-[600px] w-full">
-              <img
-                src={notification.blob_url}
-                alt="Alert detection snapshot"
-                className="object-contain rounded-md h-full w-full"
-              />
+          // Main content structure: Use Flexbox
+          <div className="flex flex-col md:flex-row gap-8">
+            {/* Left Column: Image */}
+            <div className="md:w-2/3 lg:w-3/4">
+              <div className="relative h-[400px] md:h-[600px] w-full mb-4 md:mb-0">
+                <img
+                  src={notification.blob_url}
+                  alt="Alert detection snapshot"
+                  className="object-contain rounded-md h-full w-full"
+                />
+              </div>
             </div>
 
-            <div className="flex space-x-4">
-              <Button 
-                onClick={handleResolve}
-                variant="primary"
-              >
-                Mark as Resolved
-              </Button>
-              <DangerButton 
-                onClick={handleFalseAlarm}
-              >
-                Mark as False Alarm
-              </DangerButton>
+            {/* Right Column: Details & Actions */}
+            <div className="md:w-1/3 lg:w-1/4 flex flex-col">
+              <div>
+                <h1 className="text-xl md:text-2xl font-bold mb-2">
+                  Alert Detected at {notification.home_name}
+                </h1>
+                <p className="text-gray-600 mb-4">
+                  Camera: {notification.camera_name}
+                </p>
+                <p className="text-gray-600 mb-6">
+                  {format(new Date(notification.timestamp), 'PPpp')}
+                </p>
+              </div>
+
+              {/* Buttons stacked at the bottom */}
+              <div className="mt-auto flex flex-col space-y-3 items-end">
+                <Button 
+                  onClick={handleResolve}
+                  className="bg-black text-white hover:bg-gray-800 active:bg-gray-900 w-full md:w-auto py-1 px-3 text-sm" // Black bg, white text, smaller
+                >
+                  Mark as Resolved
+                </Button>
+                <DangerButton 
+                  onClick={handleFalseAlarm}
+                  className="w-full md:w-auto py-1 px-3 text-sm" // Smaller
+                >
+                  Mark as False Alarm
+                </DangerButton>
+              </div>
             </div>
           </div>
         ) : (

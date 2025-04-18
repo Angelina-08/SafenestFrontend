@@ -618,8 +618,8 @@ export const CameraView: React.FC = () => {
         <Header>
           <BackButton 
             onClick={() => navigate('/dashboard')}
-            variant="secondary"
-            size="small"
+            $variant="secondary"
+            $size="small"
           >
             <ArrowLeftIcon /> Back to Dashboard
           </BackButton>
@@ -718,8 +718,9 @@ export const CameraView: React.FC = () => {
                 <Form.Submit asChild>
                   <SubmitButton
                     type="submit"
+                    $variant="primary"
+                    $fullWidth
                     disabled={!cameraName.trim() || !cameraAddress.trim() || !hlsAddress.trim() || isSubmitting}
-                    fullWidth
                   >
                     {isSubmitting && <Spinner />}
                     {isSubmitting ? 'Creating...' : 'Add Camera'}
@@ -739,10 +740,10 @@ export const CameraView: React.FC = () => {
                 Are you sure you want to delete "{cameraToDelete?.cameraName}"? This action cannot be undone.
               </AlertDialogDescription>
               <AlertDialogFooter>
-                <Button variant="secondary" onClick={() => setShowDeleteDialog(false)}>
+                <Button $variant="secondary" onClick={() => setShowDeleteDialog(false)}>
                   Cancel
                 </Button>
-                <Button variant="primary" onClick={handleDeleteCamera} style={{ backgroundColor: 'var(--red-9)', color: 'white' }}>
+                <Button $variant="primary" style={{ backgroundColor: 'var(--red-9)', color: 'white' }} onClick={handleDeleteCamera}>
                   Delete
                 </Button>
               </AlertDialogFooter>

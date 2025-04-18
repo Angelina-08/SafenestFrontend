@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 
@@ -23,6 +23,8 @@ interface NotificationContextType {
   markAsResolved: (eventId: number) => Promise<void>;
   markAsFalseAlarm: (eventId: number) => Promise<void>;
   getNotificationById: (eventId: number) => Promise<Notification | null>;
+  pausePolling: () => void;
+  resumePolling: () => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -47,13 +49,17 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
+  const [isPollingActive, setIsPollingActive] = useState(true);
   
   // Calculate unread count
   const unreadCount = notifications.filter(n => n.status === 'unread').length;
 
   // Fetch notifications
   const fetchNotifications = useCallback(async () => {
-    if (!token) return;
+    // Ensure token exists before proceeding
+    if (!token) {
+      return;
+    }
     
     try {
       setLoading(true);
@@ -71,10 +77,10 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token]); // Dependency: token
 
   // Mark notification as resolved
-  const markAsResolved = async (eventId: number) => {
+  const markAsResolved = useCallback(async (eventId: number) => {
     if (!token) return;
     
     try {
@@ -99,14 +105,14 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       setError(null);
     } catch (err: any) {
       console.error('Error marking notification as resolved:', err);
-      setError('Failed to update notification');
+      setError('Failed to mark as resolved');
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]); // Dependencies: token
 
   // Mark notification as false alarm
-  const markAsFalseAlarm = async (eventId: number) => {
+  const markAsFalseAlarm = useCallback(async (eventId: number) => {
     if (!token) return;
     
     try {
@@ -131,14 +137,14 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       setError(null);
     } catch (err: any) {
       console.error('Error marking notification as false alarm:', err);
-      setError('Failed to update notification');
+      setError('Failed to mark as false alarm');
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]); // Dependencies: token
 
   // Get notification by ID
-  const getNotificationById = async (eventId: number): Promise<Notification | null> => {
+  const getNotificationById = useCallback(async (eventId: number): Promise<Notification | null> => {
     if (!token) return null;
     
     try {
@@ -158,27 +164,50 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]); // Dependency: token
 
   // Poll for new notifications every 10 seconds
   useEffect(() => {
     if (!token) return;
 
-    // Initial fetch
+    // Initial fetch when component mounts or token changes
     fetchNotifications();
     
     // Set up polling
     const interval = setInterval(() => {
-      // Check if we're on a notification detail page
-      if (!window.location.pathname.includes('/notifications/')) {
-        fetchNotifications();
+      console.log(`[Polling Check] ${new Date().toLocaleTimeString()} - isPollingActive: ${isPollingActive}`); // Log polling status
+      // Only fetch if polling is active
+      if (isPollingActive) { 
+        // Check if we're on a notification detail page (Keep the old check as a backup)
+        if (!window.location.pathname.includes('/notifications/')) {
+          console.log(`[Polling Fetch] ${new Date().toLocaleTimeString()} - Fetching notifications...`); // Log fetch attempt
+          fetchNotifications();
+        } else {
+          console.log(`[Polling Skip] ${new Date().toLocaleTimeString()} - Skipped fetch (on detail page).`); // Log skip reason
+        }
+      } else {
+        console.log(`[Polling Skip] ${new Date().toLocaleTimeString()} - Skipped fetch (polling paused).`); // Log skip reason
       }
     }, 10000); // 10 seconds
     
-    return () => clearInterval(interval);
-  }, [token, fetchNotifications]);
+    return () => {
+      console.log(`[Polling Cleanup] ${new Date().toLocaleTimeString()} - Clearing interval.`); // Log interval clear
+      clearInterval(interval);
+    };
+  }, [token, fetchNotifications, isPollingActive]);
 
-  const value = {
+  // Functions to control polling
+  const pausePolling = useCallback(() => {
+    console.log("[Context] Calling pausePolling"); // Add log
+    setIsPollingActive(false);
+  }, []); // No dependencies needed
+
+  const resumePolling = useCallback(() => {
+    console.log("[Context] Calling resumePolling"); // Add log
+    setIsPollingActive(true);
+  }, []); // No dependencies needed
+
+  const value = useMemo(() => ({
     notifications,
     unreadCount,
     loading,
@@ -186,8 +215,10 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     fetchNotifications,
     markAsResolved,
     markAsFalseAlarm,
-    getNotificationById
-  };
+    getNotificationById,
+    pausePolling, 
+    resumePolling
+  }), [notifications, unreadCount, loading, error, fetchNotifications, markAsResolved, markAsFalseAlarm, getNotificationById, pausePolling, resumePolling]); // Memoize the context value object
 
   return (
     <NotificationContext.Provider value={value}>

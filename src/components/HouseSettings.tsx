@@ -317,8 +317,8 @@ export const HouseSettings: React.FC<Props> = ({
                   />
                   <Button 
                     type="button"
-                    variant="secondary"
-                    size="small"
+                    $variant="secondary"
+                    $size="small"
                     onClick={handleSearch}
                     disabled={isLoading || !searchQuery.trim()}
                   >
@@ -361,12 +361,26 @@ export const HouseSettings: React.FC<Props> = ({
                 onChange={e => setNewMemberEmail(e.target.value)}
                 placeholder="Enter member email"
               />
-              <Button type="button" variant="secondary" size="small" onClick={handleAddMember}>Add</Button>
+              <Button 
+                type="button" 
+                $variant="secondary"
+                $size="small"
+                onClick={handleAddMember}
+              >
+                Add
+              </Button>
             </div>
             {permissions.map(email => (
               <div key={email} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>{email}</span>
-                <Button type="button" variant="secondary" size="small" onClick={() => handleRemoveMember(email)}>Remove</Button>
+                <Button 
+                  type="button" 
+                  $variant="secondary"
+                  $size="small"
+                  onClick={() => handleRemoveMember(email)}
+                >
+                  Remove
+                </Button>
               </div>
             ))}
           </FormGroup>

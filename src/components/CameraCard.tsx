@@ -263,10 +263,10 @@ export const CameraCard: React.FC<CameraCardProps> = ({
               Are you sure you want to delete "{camera.cameraName}"? This action cannot be undone.
             </AlertDialogDescription>
             <AlertDialogFooter>
-              <Button variant="secondary" onClick={() => setShowDeleteDialog(false)}>
+              <Button $variant="secondary" onClick={() => setShowDeleteDialog(false)}>
                 Cancel
               </Button>
-              <Button variant="primary" onClick={handleDeleteConfirm} style={{ backgroundColor: 'var(--red-9)', color: 'white' }}>
+              <Button $variant="primary" onClick={handleDeleteConfirm} style={{ backgroundColor: 'var(--red-9)', color: 'white' }}>
                 Delete
               </Button>
             </AlertDialogFooter>

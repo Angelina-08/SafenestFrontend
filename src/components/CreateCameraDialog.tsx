@@ -251,7 +251,7 @@ export const CreateCameraDialog: React.FC<CreateCameraDialogProps> = ({
               <SubmitButton
                 type="submit"
                 disabled={!cameraName.trim() || !cameraAddress.trim() || !hlsAddress.trim() || isSubmitting}
-                fullWidth
+                $fullWidth
               >
                 {isSubmitting && <Spinner />}
                 {isSubmitting ? 'Creating...' : 'Add Camera'}

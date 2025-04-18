@@ -94,9 +94,10 @@ const Logo = styled.img`
 interface TopBarProps {
   firstName?: string;
   showAvatar?: boolean;
+  onNotificationClick?: (id: number) => void;
 }
 
-export const TopBar = ({ firstName, showAvatar = false }: TopBarProps) => {
+export const TopBar = ({ firstName, showAvatar = false, onNotificationClick }: TopBarProps) => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -109,7 +110,7 @@ export const TopBar = ({ firstName, showAvatar = false }: TopBarProps) => {
       <Logo src="/assets/logo.png" alt="SafeNest Logo" />
       {showAvatar && (
         <UserMenu>
-          <NotificationBell />
+          <NotificationBell onNotificationClick={onNotificationClick} />
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
               <AvatarContainer>

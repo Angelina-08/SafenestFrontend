@@ -9,6 +9,9 @@ import { LoadingSkeleton } from '../components/LoadingSkeleton';
 import { TopBar } from '../components/TopBar';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
+import { useNotifications, Notification } from '../context/NotificationContext'; 
+import { NotificationDetailView } from '../components/NotificationDetailView';
+import * as Dialog from '@radix-ui/react-dialog'; 
 
 const API_BASE_URL = 'https://safe-nest-back-end.vercel.app';
 
@@ -67,6 +70,38 @@ const SkeletonContent = styled.div`
   padding: 1rem;
 `;
 
+const DialogOverlay = styled(Dialog.Overlay)`
+  background-color: rgba(0, 0, 0, 0.6);
+  position: fixed;
+  inset: 0;
+  animation: overlayShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
+`;
+
+const DialogContent = styled(Dialog.Content)`
+  background-color: white;
+  border-radius: 6px;
+  box-shadow: hsl(206 22% 7% / 35%) 0px 10px 38px -10px, hsl(206 22% 7% / 20%) 0px 10px 20px -15px;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90vw;
+  max-width: 900px; 
+  max-height: 85vh;
+  overflow-y: auto; 
+  padding: 0; 
+  animation: contentShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  @keyframes overlayShow {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes contentShow {
+    from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+`;
+
 interface House {
   homeId: number;
   homeName: string;
@@ -81,10 +116,19 @@ interface House {
 export const Dashboard: React.FC = () => {
   const [houses, setHouses] = useState<House[]>([]);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [, setError] = useState<string>('');
+  const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  const [selectedNotificationId, setSelectedNotificationId] = useState<number | null>(null);
+  const [detailedNotification, setDetailedNotification] = useState<Notification | null>(null);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const { 
+    getNotificationById, 
+    markAsResolved, 
+    markAsFalseAlarm,
+  } = useNotifications();
 
   const fetchHouses = useCallback(async () => {
     try {
@@ -107,6 +151,47 @@ export const Dashboard: React.FC = () => {
       setLoading(false);
     }
   }, [navigate]);
+
+  const handleNotificationSelect = useCallback(async (id: number) => {
+    setSelectedNotificationId(id);
+    setIsDetailLoading(true);
+    setDetailedNotification(null); 
+    try {
+      const notificationData = await getNotificationById(id);
+      setDetailedNotification(notificationData);
+    } catch (err) {
+      console.error("Error fetching notification details:", err);
+      setError('Failed to load notification details.');
+      setSelectedNotificationId(null); 
+    } finally {
+      setIsDetailLoading(false);
+    }
+  }, [getNotificationById]);
+
+  const handleCloseDialog = () => {
+    setSelectedNotificationId(null);
+    setDetailedNotification(null);
+  };
+
+  const handleResolve = async (eventId: number) => {
+    try {
+      await markAsResolved(eventId);
+      handleCloseDialog();
+    } catch (err) {
+      console.error("Error resolving notification:", err);
+      setError('Failed to mark notification as resolved.');
+    }
+  };
+
+  const handleFalseAlarm = async (eventId: number) => {
+    try {
+      await markAsFalseAlarm(eventId);
+      handleCloseDialog();
+    } catch (err) {
+      console.error("Error marking as false alarm:", err);
+      setError('Failed to mark notification as false alarm.');
+    }
+  };
 
   useEffect(() => {
     if (!authLoading) {
@@ -149,7 +234,6 @@ export const Dashboard: React.FC = () => {
         return;
       }
 
-      // Update house details if name or imageUrl changed
       if (name || imageUrl) {
         const response = await axios.put(`${API_BASE_URL}/api/houses/${id}`, 
           { name, imageUrl },
@@ -159,7 +243,6 @@ export const Dashboard: React.FC = () => {
         if (!response.data) throw new Error('Failed to update house');
       }
 
-      // Update permissions
       const permissionsResponse = await axios.put(`${API_BASE_URL}/api/houses/${id}/permissions`, 
         { permissions },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -198,8 +281,10 @@ export const Dashboard: React.FC = () => {
       <TopBar 
         firstName={user?.firstName}
         showAvatar={true}
+        onNotificationClick={handleNotificationSelect} 
       />
       <Content>
+        {error && <p className="text-red-500 mb-4 bg-red-100 p-3 rounded-md border border-red-300">Error: {error}</p>}
         <HousesGrid>
           {loading ? (
             renderSkeletons()
@@ -225,6 +310,26 @@ export const Dashboard: React.FC = () => {
           onOpenChange={setShowCreateDialog}
           onCreateHouse={handleCreateHouse}
         />
+
+        <Dialog.Root open={selectedNotificationId !== null} onOpenChange={(open) => !open && handleCloseDialog()}>
+          <Dialog.Portal>
+            <DialogOverlay />
+            <DialogContent>
+              {isDetailLoading ? (
+                <div className="p-8 text-center">Loading notification...</div> 
+              ) : detailedNotification ? (
+                <NotificationDetailView 
+                  notification={detailedNotification}
+                  onResolve={handleResolve}
+                  onFalseAlarm={handleFalseAlarm}
+                  onClose={handleCloseDialog}
+                />
+              ) : (
+                <div className="p-8 text-center text-red-600">Failed to load details.</div> 
+              )}
+            </DialogContent>
+          </Dialog.Portal>
+        </Dialog.Root>
       </Content>
     </Container>
   );

@@ -2,9 +2,9 @@ import React from 'react';
 import styled, { css } from 'styled-components';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary';
-  size?: 'normal' | 'small';
-  fullWidth?: boolean;
+  $variant?: 'primary' | 'secondary';
+  $size?: 'normal' | 'small';
+  $fullWidth?: boolean;
 }
 
 const StyledButton = styled.button<ButtonProps>`
@@ -20,7 +20,7 @@ const StyledButton = styled.button<ButtonProps>`
   cursor: pointer;
   transition: all 0.2s ease;
 
-  ${props => props.size === 'small' ? css`
+  ${props => props.$size === 'small' ? css`
     padding: 0.5rem 1rem;
     font-size: 0.875rem;
   ` : css`
@@ -28,11 +28,11 @@ const StyledButton = styled.button<ButtonProps>`
     font-size: 1rem;
   `}
 
-  ${props => props.fullWidth && css`
+  ${props => props.$fullWidth && css`
     width: 100%;
   `}
 
-  ${props => props.variant === 'secondary' ? css`
+  ${props => props.$variant === 'secondary' ? css`
     background-color: var(--gray-3);
     color: var(--gray-12);
     &:hover:not(:disabled) {
@@ -65,16 +65,16 @@ const StyledButton = styled.button<ButtonProps>`
 
 export const Button: React.FC<ButtonProps> = ({ 
   children, 
-  variant = 'primary',
-  size = 'normal',
-  fullWidth = false,
+  $variant = 'primary',
+  $size = 'normal',
+  $fullWidth = false,
   ...props 
 }) => {
   return (
     <StyledButton
-      variant={variant}
-      size={size}
-      fullWidth={fullWidth}
+      $variant={$variant}
+      $size={$size}
+      $fullWidth={$fullWidth}
       {...props}
     >
       {children}

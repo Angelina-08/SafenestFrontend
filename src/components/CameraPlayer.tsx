@@ -153,11 +153,19 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, hlsUrl, cam
             <pre>{debugInfo}</pre>
           </div>
           <div className="flex space-x-2">
-            <Button onClick={restartStream} variant="secondary" size="small">
+            <Button 
+              onClick={restartStream} 
+              $variant="secondary" 
+              $size="small"
+            >
               <ReloadIcon className="mr-2" />
               Retry
             </Button>
-            <Button onClick={openInNewTab} variant="secondary" size="small">
+            <Button 
+              onClick={openInNewTab} 
+              $variant="secondary" 
+              $size="small"
+            >
               Open in New Tab
             </Button>
           </div>
@@ -167,12 +175,20 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, hlsUrl, cam
       {/* Controls (only show when not using native controls) */}
       <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
         <div className="flex justify-between items-center">
-          <Button onClick={togglePlayback} variant="secondary" size="small">
+          <Button 
+            onClick={togglePlayback} 
+            $variant="secondary" 
+            $size="small"
+          >
             {isPlaying ? <PauseIcon className="mr-2" /> : <PlayIcon className="mr-2" />}
             {isPlaying ? 'Pause' : 'Play'}
           </Button>
           
-          <Button onClick={restartStream} variant="secondary" size="small">
+          <Button 
+            onClick={restartStream} 
+            $variant="secondary" 
+            $size="small"
+          >
             <ReloadIcon className="mr-2" />
             Restart
           </Button>

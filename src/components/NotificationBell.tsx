@@ -5,7 +5,11 @@ import { useNotifications, Notification } from '../context/NotificationContext';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
-export const NotificationBell: React.FC = () => {
+interface NotificationBellProps {
+  onNotificationClick?: (id: number) => void;
+}
+
+export const NotificationBell: React.FC<NotificationBellProps> = ({ onNotificationClick }) => {
   const { notifications, unreadCount } = useNotifications();
   const navigate = useNavigate();
 
@@ -14,8 +18,12 @@ export const NotificationBell: React.FC = () => {
     read: notifications.filter(n => n.status !== 'unread'),
   };
 
-  const handleNotificationClick = (notification: Notification) => {
-    navigate(`/notifications/${notification.event_id}`);
+  const handleItemClick = (notification: Notification) => {
+    if (onNotificationClick) {
+      onNotificationClick(notification.event_id);
+    } else {
+      navigate(`/notifications/${notification.event_id}`);
+    }
   };
 
   return (
@@ -63,7 +71,7 @@ export const NotificationBell: React.FC = () => {
                   <button
                     key={n.event_id}
                     className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 flex items-start"
-                    onClick={() => handleNotificationClick(n)}
+                    onClick={() => handleItemClick(n)}
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">
@@ -88,7 +96,7 @@ export const NotificationBell: React.FC = () => {
                   <button
                     key={n.event_id}
                     className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 flex items-start"
-                    onClick={() => handleNotificationClick(n)}
+                    onClick={() => handleItemClick(n)}
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-700 truncate">

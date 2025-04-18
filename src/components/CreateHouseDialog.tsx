@@ -338,8 +338,8 @@ export const CreateHouseDialog: React.FC<CreateHouseDialogProps> = ({
                       type="button"
                       onClick={handleSearch}
                       disabled={isLoading || !searchQuery.trim()}
-                      size="small"
-                      variant="secondary"
+                      $size="small"
+                      $variant="secondary"
                     >
                       <MagnifyingGlassIcon />
                       {isLoading ? 'Searching...' : 'Search'}
@@ -375,7 +375,7 @@ export const CreateHouseDialog: React.FC<CreateHouseDialogProps> = ({
               <SubmitButton
                 type="submit"
                 disabled={!houseName.trim() || !selectedImage || isSubmitting}
-                fullWidth
+                $fullWidth
               >
                 {isSubmitting && <Spinner />}
                 {isSubmitting ? 'Creating...' : 'Create House'}

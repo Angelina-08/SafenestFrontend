@@ -188,8 +188,8 @@ export const CameraDetail: React.FC = () => {
           <Header>
             <BackButton 
               onClick={() => navigate('/dashboard')}
-              variant="secondary"
-              size="small"
+              $variant="secondary"
+              $size="small"
             >
               <ArrowLeftIcon /> Back to Dashboard
             </BackButton>
@@ -210,8 +210,8 @@ export const CameraDetail: React.FC = () => {
         <Header>
           <BackButton 
             onClick={() => navigate(`/house/${camera.homeId}`)}
-            variant="secondary"
-            size="small"
+            $variant="secondary"
+            $size="small"
           >
             <ArrowLeftIcon /> Back to {houseName || 'House'}
           </BackButton>
@@ -255,7 +255,7 @@ export const CameraDetail: React.FC = () => {
           <ButtonGroup>
             <ActionButton 
               onClick={() => setShowEditDialog(true)}
-              variant="secondary"
+              $variant="secondary"
             >
               <Pencil1Icon /> Edit Camera
             </ActionButton>
