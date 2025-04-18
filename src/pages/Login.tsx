@@ -1,23 +1,14 @@
-import  { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthForm } from '../components/AuthForm';
 import { TopBar } from '../components/TopBar';
-import axios from 'axios';
-
-interface LoginResponse {
-  token: string;
-  refreshToken: string;
-  user: {
-    firstName: string;
-    lastName: string;
-    emailVerified: boolean;
-  };
-}
+import { useAuth } from '../contexts/AuthContext';
 
 export const Login = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (event: any) => {
     event.preventDefault();
@@ -29,30 +20,12 @@ export const Login = () => {
     const password = formData.get('password') as string;
 
     try {
-      const response = await axios.post<LoginResponse>(
-        'https://safe-nest-back-end.vercel.app/api/auth/login',
-        {
-          email,
-          password,
-        }
-      );
-
-      const { token, refreshToken, user } = response.data;
-      
-      // Store tokens
-      localStorage.setItem('token', token);
-      localStorage.setItem('refreshToken', refreshToken);
-      
-      // Store user data
-      localStorage.setItem('userData', JSON.stringify({
-        firstName: user.firstName,
-        lastName: user.lastName,
-        emailVerified: user.emailVerified
-      }));
-
+      await login(email, password);
       navigate('/dashboard');
-    } catch (error: any) {
-      setError(error.response?.data?.error || 'An error occurred');
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError(err.response?.data?.message || 'Failed to login. Please check your credentials.');
+    } finally {
       setIsLoading(false);
     }
   };

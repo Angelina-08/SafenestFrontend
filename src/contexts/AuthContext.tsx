@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import axios from 'axios';
 
 // Define user type
@@ -34,6 +34,9 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// API base URL
+const API_BASE_URL = 'https://safe-nest-back-end.vercel.app';
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -61,7 +64,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
     
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/login`, {
+      const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
         email,
         password
       });
@@ -81,6 +84,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to login');
       console.error('Login error:', err);
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -91,7 +95,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
     
     try {
-      await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/register`, {
+      await axios.post(`${API_BASE_URL}/api/auth/register`, {
         email,
         firstName,
         lastName,
@@ -113,7 +117,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
     
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/verify-email`, {
+      const response = await axios.post(`${API_BASE_URL}/api/auth/verify-email`, {
         email,
         code
       });
@@ -144,7 +148,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
     
     try {
-      await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/request-verification`, {
+      await axios.post(`${API_BASE_URL}/api/auth/request-verification`, {
         email
       });
     } catch (err: any) {

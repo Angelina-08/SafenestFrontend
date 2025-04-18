@@ -39,6 +39,9 @@ interface NotificationProviderProps {
   children: ReactNode;
 }
 
+// API base URL
+const API_BASE_URL = 'https://safe-nest-back-end.vercel.app';
+
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -54,7 +57,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     
     try {
       setLoading(true);
-      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/notifications`, {
+      const response = await axios.get(`${API_BASE_URL}/api/notifications`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -76,7 +79,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     
     try {
       setLoading(true);
-      await axios.put(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/notifications/${eventId}/status`, {
+      await axios.put(`${API_BASE_URL}/api/notifications/${eventId}/status`, {
         status: 'resolved'
       }, {
         headers: {
@@ -108,7 +111,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     
     try {
       setLoading(true);
-      await axios.put(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/notifications/${eventId}/status`, {
+      await axios.put(`${API_BASE_URL}/api/notifications/${eventId}/status`, {
         status: 'false_alarm'
       }, {
         headers: {
@@ -140,7 +143,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     
     try {
       setLoading(true);
-      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/notifications/${eventId}`, {
+      const response = await axios.get(`${API_BASE_URL}/api/notifications/${eventId}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
