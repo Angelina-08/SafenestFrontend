@@ -132,6 +132,26 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
       
       console.log('Final stream URL:', streamUrl);
       
+      // Handle HTTPS to HTTP mixed content issue
+      if (window.location.protocol === 'https:' && streamUrl.startsWith('http:')) {
+        console.warn('Mixed content detected: Streaming server is HTTP but frontend is HTTPS');
+        
+        // Option 1: Try to use relative URL if on same domain
+        if (streamUrl.includes(window.location.hostname)) {
+          streamUrl = streamUrl.replace(/^http:\/\/[^\/]+/, '');
+          console.log('Using relative URL:', streamUrl);
+        } 
+        // Option 2: Show warning to user
+        else {
+          setError(
+            'Secure connection issue: Your browser is blocking the stream because it uses an insecure connection. ' +
+            'Please try accessing this page using HTTP instead of HTTPS, or configure your streaming server with SSL.'
+          );
+          setIsLoading(false);
+          return;
+        }
+      }
+      
       setStreamInfo({
         streamId: response.data.streamId,
         streamUrl: streamUrl
@@ -190,18 +210,24 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
     };
   }, [streamInfo, startStream, stopStream]);
 
-  // Send heartbeat to keep the stream alive
+  // Send heartbeat to keep the stream alive via the backend
   useEffect(() => {
     if (!streamInfo) return;
     
-    const heartbeatInterval = setInterval(() => {
-      const baseUrl = streamInfo.streamUrl.split('/stream/')[0];
-      const streamId = streamInfo.streamUrl.split('/stream/')[1];
-      
-      fetch(`${baseUrl}/stream/${streamId}/heartbeat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      }).catch(err => console.error('Heartbeat error:', err));
+    const heartbeatInterval = setInterval(async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        
+        // Send heartbeat through our backend instead of directly to streaming server
+        await axios.post(
+          `${API_BASE_URL}/api/camera/stream/heartbeat`,
+          { streamId: streamInfo.streamId },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } catch (err) {
+        console.error('Heartbeat error:', err);
+      }
     }, 30000); // every 30 seconds
     
     return () => {
@@ -253,6 +279,7 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
             onError={handleIframeError}
             title="Camera Stream"
             allow="autoplay"
+            sandbox="allow-same-origin allow-scripts"
           />
           <div style={{ position: 'absolute', top: 5, right: 5, background: 'rgba(0,0,0,0.5)', color: 'white', padding: '2px 5px', borderRadius: 3, fontSize: 12 }}>
             Stream ID: {streamInfo.streamId.substring(0, 8)}...
