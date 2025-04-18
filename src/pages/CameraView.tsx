@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import { TopBar } from '../components/TopBar';
 import { LoadingSkeleton } from '../components/LoadingSkeleton';
 import { Button } from '../components/Button';
