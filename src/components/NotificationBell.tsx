@@ -35,10 +35,11 @@ export const NotificationBell: React.FC = () => {
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          side="bottom"
-          align="end"
-          sideOffset={5}
-          className="w-80 bg-white rounded-md shadow-lg z-50"
+          side="right"
+          align="center"
+          sideOffset={10}
+          className="w-80 bg-white shadow-lg rounded-md z-50"
+          style={{ backgroundColor: 'rgba(255, 255, 255, 1)' }}
         >
           <div className="flex items-center justify-between p-4 border-b">
             <h3 className="font-semibold">Notifications</h3>
