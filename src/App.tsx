@@ -14,9 +14,11 @@ import {
   red,
   redDark,
 } from '@radix-ui/colors';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import { Suspense } from 'react';
 import ErrorBoundary from './components/ErrorBoundary';
+import NotificationDetail from './pages/notifications/[id]';
 
 const GlobalStyle = createGlobalStyle`
   :root {
@@ -56,21 +58,24 @@ function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <Router>
-          <GlobalStyle />
-          <Suspense fallback={<LoadingFallback />}>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/verify-email" element={<EmailVerification />} />
-              <Route path="/house/:homeId" element={<CameraView />} />
-              <Route path="/camera/:cameraId" element={<CameraDetail />} />
-              <Route path="/" element={<Navigate to="/login" replace />} />
-              <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
-          </Suspense>
-        </Router>
+        <NotificationProvider>
+          <Router>
+            <GlobalStyle />
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/verify-email" element={<EmailVerification />} />
+                <Route path="/house/:homeId" element={<CameraView />} />
+                <Route path="/camera/:cameraId" element={<CameraDetail />} />
+                <Route path="/notifications/:id" element={<NotificationDetail />} />
+                <Route path="/" element={<Navigate to="/login" replace />} />
+                <Route path="*" element={<Navigate to="/login" replace />} />
+              </Routes>
+            </Suspense>
+          </Router>
+        </NotificationProvider>
       </AuthProvider>
     </ErrorBoundary>
   );
