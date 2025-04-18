@@ -4,10 +4,46 @@ import { Bell, X } from 'lucide-react';
 import { useNotifications, Notification } from '../context/NotificationContext';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import styled from 'styled-components';
 
 interface NotificationBellProps {
-  onNotificationClick?: (id: number) => void;
+  onNotificationClick?: (notification: Notification) => void;
 }
+
+interface NotificationItemProps {
+  isUnread: boolean;
+  isClickable: boolean;
+}
+
+const NotificationItem = styled.div<NotificationItemProps>`
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--gray-3);
+  cursor: ${(props) => props.isClickable ? 'pointer' : 'default'};
+  background-color: ${(props) => props.isUnread ? 'var(--blue-2)' : 'transparent'};
+  opacity: ${(props) => props.isClickable ? 1 : 0.7};
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  ${(props) => props.isClickable && `
+    &:hover {
+      background-color: var(--gray-3);
+    }
+  `}
+
+  p {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.3;
+  }
+
+  .timestamp {
+    font-size: 0.75rem;
+    color: #666;
+    margin-top: 0.25rem;
+  }
+`;
 
 export const NotificationBell: React.FC<NotificationBellProps> = ({ onNotificationClick }) => {
   const { notifications, unreadCount } = useNotifications();
@@ -20,7 +56,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onNotificati
 
   const handleItemClick = (notification: Notification) => {
     if (onNotificationClick) {
-      onNotificationClick(notification.event_id);
+      onNotificationClick(notification);
     } else {
       navigate(`/notifications/${notification.event_id}`);
     }
@@ -68,22 +104,20 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onNotificati
                   New
                 </div>
                 {groupedNotifications.unread.map(n => (
-                  <button
+                  <NotificationItem
                     key={n.event_id}
-                    className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 flex items-start"
+                    isUnread={true}
+                    isClickable={true}
                     onClick={() => handleItemClick(n)}
                   >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        Alert at {n.home_name}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Camera: {n.camera_name} • {' '}
-                        {formatDistanceToNow(new Date(n.timestamp), { addSuffix: true })}
-                      </p>
-                    </div>
-                    <span className="ml-2 flex-shrink-0 w-2 h-2 rounded-full bg-red-600"></span>
-                  </button>
+                    <p>
+                      Alert at {n.home_name}
+                    </p>
+                    <p className="timestamp">
+                      Camera: {n.camera_name} • {' '}
+                      {formatDistanceToNow(new Date(n.timestamp), { addSuffix: true })}
+                    </p>
+                  </NotificationItem>
                 ))}
               </div>
             )}
@@ -93,21 +127,19 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onNotificati
                   Earlier
                 </div>
                 {groupedNotifications.read.map(n => (
-                  <button
+                  <NotificationItem
                     key={n.event_id}
-                    className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 flex items-start"
-                    onClick={() => handleItemClick(n)}
+                    isUnread={false}
+                    isClickable={false}
                   >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-700 truncate">
-                        Alert at {n.home_name}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Camera: {n.camera_name} • {' '}
-                        {formatDistanceToNow(new Date(n.timestamp), { addSuffix: true })}
-                      </p>
-                    </div>
-                  </button>
+                    <p>
+                      Alert at {n.home_name}
+                    </p>
+                    <p className="timestamp">
+                      Camera: {n.camera_name} • {' '}
+                      {formatDistanceToNow(new Date(n.timestamp), { addSuffix: true })}
+                    </p>
+                  </NotificationItem>
                 ))}
               </div>
             )}

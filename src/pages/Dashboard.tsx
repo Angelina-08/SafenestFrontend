@@ -121,11 +121,9 @@ export const Dashboard: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  const [selectedNotificationId, setSelectedNotificationId] = useState<number | null>(null);
-  const [detailedNotification, setDetailedNotification] = useState<Notification | null>(null);
-  const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const { 
-    getNotificationById, 
     markAsResolved, 
     markAsFalseAlarm,
   } = useNotifications();
@@ -152,25 +150,14 @@ export const Dashboard: React.FC = () => {
     }
   }, [navigate]);
 
-  const handleNotificationSelect = useCallback(async (id: number) => {
-    setSelectedNotificationId(id);
-    setIsDetailLoading(true);
-    setDetailedNotification(null); 
-    try {
-      const notificationData = await getNotificationById(id);
-      setDetailedNotification(notificationData);
-    } catch (err) {
-      console.error("Error fetching notification details:", err);
-      setError('Failed to load notification details.');
-      setSelectedNotificationId(null); 
-    } finally {
-      setIsDetailLoading(false);
-    }
-  }, [getNotificationById]);
+  const handleNotificationClick = (notification: Notification) => {
+    setSelectedNotification(notification); 
+    setIsDetailOpen(true);
+  };
 
   const handleCloseDialog = () => {
-    setSelectedNotificationId(null);
-    setDetailedNotification(null);
+    setSelectedNotification(null);
+    setIsDetailOpen(false);
   };
 
   const handleResolve = async (eventId: number) => {
@@ -281,7 +268,7 @@ export const Dashboard: React.FC = () => {
       <TopBar 
         firstName={user?.firstName}
         showAvatar={true}
-        onNotificationClick={handleNotificationSelect} 
+        onNotificationClick={handleNotificationClick} 
       />
       <Content>
         {error && <p className="text-red-500 mb-4 bg-red-100 p-3 rounded-md border border-red-300">Error: {error}</p>}
@@ -311,15 +298,13 @@ export const Dashboard: React.FC = () => {
           onCreateHouse={handleCreateHouse}
         />
 
-        <Dialog.Root open={selectedNotificationId !== null} onOpenChange={(open) => !open && handleCloseDialog()}>
+        <Dialog.Root open={isDetailOpen} onOpenChange={(open) => !open && handleCloseDialog()}>
           <Dialog.Portal>
             <DialogOverlay />
             <DialogContent>
-              {isDetailLoading ? (
-                <div className="p-8 text-center">Loading notification...</div> 
-              ) : detailedNotification ? (
+              {selectedNotification ? (
                 <NotificationDetailView 
-                  notification={detailedNotification}
+                  notification={selectedNotification}
                   onResolve={handleResolve}
                   onFalseAlarm={handleFalseAlarm}
                   onClose={handleCloseDialog}

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { ExitIcon } from '@radix-ui/react-icons';
 import { clearAuthData } from '../utils/auth';
 import { NotificationBell } from './NotificationBell';
+import { Notification } from '../context/NotificationContext';
 
 const StyledTopBar = styled.div`
   display: flex;
@@ -94,7 +95,7 @@ const Logo = styled.img`
 interface TopBarProps {
   firstName?: string;
   showAvatar?: boolean;
-  onNotificationClick?: (id: number) => void;
+  onNotificationClick?: (notification: Notification) => void;
 }
 
 export const TopBar = ({ firstName, showAvatar = false, onNotificationClick }: TopBarProps) => {
