@@ -97,7 +97,6 @@ interface CameraPlayerProps {
 declare global {
   interface Window {
     JSMpeg: any;
-    streamPlayer: any;
   }
 }
 
@@ -149,7 +148,7 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
       // Create WebSocket URL (convert http to ws, https to wss)
       const wsProtocol = baseUrl.startsWith('https') ? 'wss' : 'ws';
       const wsBaseUrl = baseUrl.replace(/^http(s?):\/\//, `${wsProtocol}://`);
-      const wsUrl = `${wsBaseUrl}/api/${streamId}`;
+      const wsUrl = `${wsBaseUrl}/ws/${streamId}`;
       
       console.log('Connecting to WebSocket stream:', wsUrl);
       
