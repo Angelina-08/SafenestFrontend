@@ -101,6 +101,8 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
       setIsLoading(true);
       setError(null);
       
+      console.log('Starting stream for camera ID:', cameraId);
+      
       const token = localStorage.getItem('token');
       if (!token) {
         setError('Authentication error. Please log in again.');
@@ -109,17 +111,39 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
       }
 
       // Request stream from backend
+      console.log('Sending request to:', `${API_BASE_URL}/api/camera/stream/start`);
       const response = await axios.post(
         `${API_BASE_URL}/api/camera/stream/start`,
         { cameraId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      setStreamInfo(response.data);
+      console.log('Stream response:', response.data);
+      
+      // Make sure the streamUrl is a complete URL
+      let streamUrl = response.data.streamUrl;
+      
+      // If the URL doesn't start with http, assume it's a path and prepend the MJPEG server URL
+      if (!streamUrl.startsWith('http')) {
+        // Extract the MJPEG server URL from the response if possible
+        const baseUrl = response.data.streamUrl.split('/stream/')[0] || 'http://56.228.7.181:3000';
+        streamUrl = `${baseUrl}${streamUrl}`;
+      }
+      
+      console.log('Final stream URL:', streamUrl);
+      
+      setStreamInfo({
+        streamId: response.data.streamId,
+        streamUrl: streamUrl
+      });
       setIsPlaying(true);
       setIsLoading(false);
     } catch (error) {
       console.error('Error starting stream:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Response data:', error.response?.data);
+        console.error('Response status:', error.response?.status);
+      }
       setError('Failed to start camera stream. Please try again.');
       setIsLoading(false);
     }
@@ -156,7 +180,8 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
 
   // Start/stop stream based on isPlaying state
   useEffect(() => {
-    if (isPlaying && !streamInfo) {
+    // Auto-start the stream when component mounts
+    if (!streamInfo) {
       startStream();
     }
     
@@ -166,7 +191,7 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
         stopStream();
       }
     };
-  }, [isPlaying, streamInfo, cameraId, startStream, stopStream]);
+  }, [streamInfo, startStream, stopStream]);
 
   const handlePlay = () => {
     setIsPlaying(true);
@@ -188,12 +213,21 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
   return (
     <PlayerContainer>
       {streamInfo ? (
-        <img 
-          ref={imgRef}
-          src={streamInfo.streamUrl}
-          alt="Camera Stream"
-          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-        />
+        <>
+          <img 
+            ref={imgRef}
+            src={streamInfo.streamUrl}
+            alt="Camera Stream"
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            onError={(e) => {
+              console.error('Error loading stream image:', e);
+              setError('Failed to load camera stream. Please try again.');
+            }}
+          />
+          <div style={{ position: 'absolute', top: 5, right: 5, background: 'rgba(0,0,0,0.5)', color: 'white', padding: '2px 5px', borderRadius: 3, fontSize: 12 }}>
+            Stream ID: {streamInfo.streamId.substring(0, 8)}...
+          </div>
+        </>
       ) : (
         <VideoElement 
           ref={videoRef}
