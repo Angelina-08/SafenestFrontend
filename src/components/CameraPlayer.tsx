@@ -21,6 +21,12 @@ const VideoElement = styled.video`
   object-fit: contain;
 `;
 
+const CanvasElement = styled.canvas`
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+`;
+
 const PlayerControls = styled.div`
   position: absolute;
   bottom: 0;
@@ -89,11 +95,113 @@ interface CameraPlayerProps {
 
 export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [streamInfo, setStreamInfo] = useState<{ streamId: string, streamUrl: string } | null>(null);
+
+  // Function to handle WebSocket connection
+  const connectToWebSocket = useCallback((streamUrl: string) => {
+    if (!canvasRef.current) return;
+    
+    // Parse the URL to get the base URL and stream ID
+    const urlParts = streamUrl.split('/stream/');
+    if (urlParts.length !== 2) {
+      console.error('Invalid stream URL format:', streamUrl);
+      setError('Invalid stream URL format');
+      setIsLoading(false);
+      return;
+    }
+    
+    const baseUrl = urlParts[0];
+    const streamId = urlParts[1];
+    
+    // Create WebSocket URL (convert http to ws, https to wss)
+    const wsProtocol = baseUrl.startsWith('https') ? 'wss' : 'ws';
+    const wsBaseUrl = baseUrl.replace(/^http(s?):\/\//, `${wsProtocol}://`);
+    const wsUrl = `${wsBaseUrl}/stream/${streamId}`;
+    
+    console.log('Connecting to WebSocket:', wsUrl);
+    
+    // Close existing connection if any
+    if (wsRef.current) {
+      wsRef.current.close();
+    }
+    
+    // Create new WebSocket connection
+    const ws = new WebSocket(wsUrl);
+    ws.binaryType = 'arraybuffer';
+    wsRef.current = ws;
+    
+    // Set up canvas
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) {
+      console.error('Failed to get canvas context');
+      setError('Failed to initialize video player');
+      setIsLoading(false);
+      return;
+    }
+    
+    // Draw initial background
+    ctx.fillStyle = '#333';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.font = '20px Arial';
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'center';
+    ctx.fillText('Connecting to stream...', canvas.width / 2, canvas.height / 2);
+    
+    // WebSocket event handlers
+    ws.onopen = () => {
+      console.log('WebSocket connection established');
+      setIsLoading(false);
+    };
+    
+    ws.onmessage = (event) => {
+      // Convert ArrayBuffer to Blob
+      const blob = new Blob([event.data], { type: 'image/jpeg' });
+      
+      // Create a URL for the blob
+      const url = URL.createObjectURL(blob);
+      
+      // Create an image element
+      const img = new Image();
+      
+      // When the image loads, draw it on the canvas
+      img.onload = () => {
+        if (!ctx || !canvas) return;
+        
+        // Clear the canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw the image on the canvas
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // Release the blob URL
+        URL.revokeObjectURL(url);
+      };
+      
+      // Set the image source to the blob URL
+      img.src = url;
+    };
+    
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      setError('Error connecting to stream. Please try again.');
+      setIsLoading(false);
+    };
+    
+    ws.onclose = () => {
+      console.log('WebSocket connection closed');
+      if (isPlaying) {
+        setError('Stream connection closed. Please try again.');
+      }
+    };
+    
+  }, [isPlaying]);
 
   // Start stream when component mounts or when play is clicked
   const startStream = useCallback(async () => {
@@ -136,8 +244,11 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
         streamId: response.data.streamId,
         streamUrl: streamUrl
       });
+      
+      // Connect to WebSocket for streaming
+      connectToWebSocket(streamUrl);
+      
       setIsPlaying(true);
-      setIsLoading(false);
     } catch (error) {
       console.error('Error starting stream:', error);
       if (axios.isAxiosError(error)) {
@@ -147,7 +258,7 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
       setError('Failed to start camera stream. Please try again.');
       setIsLoading(false);
     }
-  }, [cameraId]);
+  }, [cameraId, connectToWebSocket]);
 
   // Stop stream when component unmounts or when pause is clicked
   const stopStream = useCallback(async () => {
@@ -156,6 +267,12 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
+
+      // Close WebSocket connection
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
 
       // Request stream termination from backend
       await axios.post(
@@ -167,9 +284,13 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
       setIsPlaying(false);
       setStreamInfo(null);
       
-      // Clear the image
-      if (imgRef.current) {
-        imgRef.current.src = '';
+      // Clear the canvas
+      if (canvasRef.current) {
+        const ctx = canvasRef.current.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#000';
+          ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        }
       }
     } catch (error) {
       console.error('Error stopping stream:', error);
@@ -193,8 +314,16 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
     };
   }, [streamInfo, startStream, stopStream]);
 
+  // Set up canvas dimensions
+  useEffect(() => {
+    if (canvasRef.current) {
+      canvasRef.current.width = 640;
+      canvasRef.current.height = 480;
+    }
+  }, []);
+
   const handlePlay = () => {
-    setIsPlaying(true);
+    startStream();
   };
 
   const handlePause = () => {
@@ -214,16 +343,7 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
     <PlayerContainer>
       {streamInfo ? (
         <>
-          <img 
-            ref={imgRef}
-            src={streamInfo.streamUrl}
-            alt="Camera Stream"
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-            onError={(e) => {
-              console.error('Error loading stream image:', e);
-              setError('Failed to load camera stream. Please try again.');
-            }}
-          />
+          <CanvasElement ref={canvasRef} />
           <div style={{ position: 'absolute', top: 5, right: 5, background: 'rgba(0,0,0,0.5)', color: 'white', padding: '2px 5px', borderRadius: 3, fontSize: 12 }}>
             Stream ID: {streamInfo.streamId.substring(0, 8)}...
           </div>
