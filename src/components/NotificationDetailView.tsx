@@ -64,7 +64,6 @@ const ImageContainer = styled.div`
   margin-bottom: 1rem;
   border: 1px solid var(--gray-6); // Thin border
   border-radius: 4px; // Slight rounding for the border
-  overflow: hidden; // Ensure image respects border radius
   position: relative; // Needed if we add overlays later
   background-color: var(--gray-2); // Background for letterboxing
 `;
