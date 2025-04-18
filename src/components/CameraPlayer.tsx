@@ -108,29 +108,59 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [streamInfo, setStreamInfo] = useState<{ streamId: string, streamUrl: string } | null>(null);
+  const [jsmpegLoaded, setJsmpegLoaded] = useState(false);
 
   // Load JSMpeg library
   const loadJSMpeg = useCallback(() => {
     return new Promise<void>((resolve, reject) => {
       if (window.JSMpeg) {
+        setJsmpegLoaded(true);
         resolve();
         return;
       }
       
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/jsmpeg-player@5.0.0/build/jsmpeg.min.js';
-      script.onload = () => resolve();
-      script.onerror = (e) => {
-        console.error('Error loading JSMpeg:', e);
-        reject(new Error('Failed to load video player'));
+      // Try multiple CDN sources
+      const cdnUrls = [
+        'https://cdn.jsdelivr.net/npm/jsmpeg@1.0.0/jsmpeg.min.js',
+        'https://unpkg.com/jsmpeg@1.0.0/jsmpeg.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/jsmpeg/0.1/jsmpeg.min.js'
+      ];
+      
+      const loadScript = (index: number) => {
+        if (index >= cdnUrls.length) {
+          console.error('Failed to load JSMpeg from all CDN sources');
+          reject(new Error('Failed to load video player from all sources'));
+          return;
+        }
+        
+        const script = document.createElement('script');
+        script.src = cdnUrls[index];
+        
+        script.onload = () => {
+          console.log('JSMpeg loaded successfully from', cdnUrls[index]);
+          setJsmpegLoaded(true);
+          resolve();
+        };
+        
+        script.onerror = () => {
+          console.warn(`Failed to load JSMpeg from ${cdnUrls[index]}, trying next source...`);
+          document.head.removeChild(script);
+          loadScript(index + 1);
+        };
+        
+        document.head.appendChild(script);
       };
-      document.head.appendChild(script);
+      
+      loadScript(0);
     });
   }, []);
 
   // Connect to the WebSocket stream
   const connectToStream = useCallback((streamUrl: string) => {
-    if (!canvasRef.current || !streamInfo) return;
+    if (!canvasRef.current || !streamInfo || !jsmpegLoaded) {
+      console.error('Cannot connect to stream: Canvas ref, stream info, or JSMpeg not available');
+      return;
+    }
     
     try {
       // Parse the URL to get the base URL and stream ID
@@ -152,19 +182,35 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
       
       console.log('Connecting to WebSocket stream:', wsUrl);
       
-      // Create JSMpeg player
-      if (window.JSMpeg) {
-        // Clean up existing player if any
-        if (playerRef.current) {
+      // Check if JSMpeg is available
+      if (!window.JSMpeg) {
+        console.error('JSMpeg library not loaded');
+        setError('Video player not available. Please refresh the page and try again.');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Clean up existing player if any
+      if (playerRef.current) {
+        if (playerRef.current.destroy) {
           playerRef.current.destroy();
         }
-        
-        // Create new player
+        playerRef.current = null;
+      }
+      
+      // Create new player
+      try {
         playerRef.current = new window.JSMpeg.Player(wsUrl, {
           canvas: canvasRef.current,
           autoplay: true,
           audio: false,
           loop: false,
+          onSourceEstablished: () => {
+            console.log('Stream source established');
+          },
+          onSourceCompleted: () => {
+            console.log('Stream source completed');
+          },
           onPlay: () => {
             console.log('Stream playback started');
             setIsLoading(false);
@@ -191,9 +237,12 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
         }, 30000); // every 30 seconds
         
         // Store interval for cleanup
-        playerRef.current.heartbeatInterval = heartbeatInterval;
-      } else {
-        setError('Video player not available');
+        if (playerRef.current) {
+          playerRef.current.heartbeatInterval = heartbeatInterval;
+        }
+      } catch (err) {
+        console.error('Error creating JSMpeg player:', err);
+        setError('Failed to initialize video player. Please try again.');
         setIsLoading(false);
       }
     } catch (error) {
@@ -201,7 +250,7 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
       setError('Failed to connect to stream. Please try again.');
       setIsLoading(false);
     }
-  }, [streamInfo]);
+  }, [streamInfo, jsmpegLoaded]);
 
   // Start stream when component mounts or when play is clicked
   const startStream = useCallback(async () => {
@@ -219,7 +268,14 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
       }
 
       // Load JSMpeg library first
-      await loadJSMpeg();
+      try {
+        await loadJSMpeg();
+      } catch (err) {
+        console.error('Failed to load JSMpeg:', err);
+        setError('Failed to load video player. Please refresh the page and try again.');
+        setIsLoading(false);
+        return;
+      }
 
       // Request stream from backend
       console.log('Sending request to:', `${API_BASE_URL}/api/camera/stream/start`);
@@ -279,7 +335,9 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
         }
         
         // Destroy player
-        playerRef.current.destroy();
+        if (playerRef.current.destroy) {
+          playerRef.current.destroy();
+        }
         playerRef.current = null;
       }
 
@@ -313,6 +371,14 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
       }
     };
   }, [streamInfo, startStream, stopStream]);
+
+  // Set up canvas dimensions
+  useEffect(() => {
+    if (canvasRef.current) {
+      canvasRef.current.width = 640;
+      canvasRef.current.height = 480;
+    }
+  }, []);
 
   const handlePlay = () => {
     startStream();
