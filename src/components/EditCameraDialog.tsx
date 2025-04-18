@@ -174,7 +174,7 @@ export const EditCameraDialog: React.FC<EditCameraDialogProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cameraName.trim() || !cameraAddress.trim() || isSubmitting) return;
+    if (!cameraName.trim() || !cameraAddress.trim() || !hlsAddress.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
@@ -232,16 +232,20 @@ export const EditCameraDialog: React.FC<EditCameraDialogProps> = ({
             </FormField>
 
             <FormField name="hlsAddress">
-              <FormLabel>HLS Address (Optional)</FormLabel>
+              <FormLabel>HLS Address</FormLabel>
               <Form.Control asChild>
                 <FormInput
                   type="text"
                   value={hlsAddress}
                   onChange={(e) => setHlsAddress(e.target.value)}
+                  required
                   placeholder="http://camera-ip:port/stream.m3u8"
                 />
               </Form.Control>
-              <HelpText>If your camera provides a direct HLS stream, enter it here for better web playback</HelpText>
+              <HelpText>Enter the HLS URL for your camera. This is required for web browser playback.</HelpText>
+              <Form.Message match="valueMissing">
+                <ErrorMessage>HLS address is required</ErrorMessage>
+              </Form.Message>
             </FormField>
 
             {error && <ErrorMessage>{error}</ErrorMessage>}

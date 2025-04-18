@@ -147,7 +147,7 @@ const HelpText = styled.p`
 interface CreateCameraDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreateCamera: (cameraName: string, cameraAddress: string) => Promise<void>;
+  onCreateCamera: (cameraName: string, cameraAddress: string, hlsAddress: string) => Promise<void>;
 }
 
 export const CreateCameraDialog: React.FC<CreateCameraDialogProps> = ({
@@ -157,19 +157,21 @@ export const CreateCameraDialog: React.FC<CreateCameraDialogProps> = ({
 }) => {
   const [cameraName, setCameraName] = useState('');
   const [cameraAddress, setCameraAddress] = useState('');
+  const [hlsAddress, setHlsAddress] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cameraName.trim() || !cameraAddress.trim() || isSubmitting) return;
+    if (!cameraName.trim() || !cameraAddress.trim() || !hlsAddress.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
-      await onCreateCamera(cameraName, cameraAddress);
+      await onCreateCamera(cameraName, cameraAddress, hlsAddress);
       onOpenChange(false);
       setCameraName('');
       setCameraAddress('');
+      setHlsAddress('');
     } catch (error) {
       console.error('Error creating camera:', error);
       setError('Failed to create camera. Please try again.');
@@ -201,7 +203,7 @@ export const CreateCameraDialog: React.FC<CreateCameraDialogProps> = ({
                 />
               </Form.Control>
               <Form.Message match="valueMissing">
-                Please enter a camera name
+                <ErrorMessage>Please enter a camera name</ErrorMessage>
               </Form.Message>
             </FormField>
 
@@ -220,7 +222,26 @@ export const CreateCameraDialog: React.FC<CreateCameraDialogProps> = ({
                 Enter the RTSP URL for your camera. This usually looks like: rtsp://username:password@camera-ip:port/stream
               </HelpText>
               <Form.Message match="valueMissing">
-                Please enter the RTSP address
+                <ErrorMessage>Please enter the RTSP address</ErrorMessage>
+              </Form.Message>
+            </FormField>
+
+            <FormField name="hlsAddress">
+              <FormLabel>HLS Address</FormLabel>
+              <Form.Control asChild>
+                <FormInput
+                  type="text"
+                  value={hlsAddress}
+                  onChange={(e) => setHlsAddress(e.target.value)}
+                  required
+                  placeholder="http://camera-ip:port/stream.m3u8"
+                />
+              </Form.Control>
+              <HelpText>
+                Enter the HLS URL for your camera. This is required for web browser playback.
+              </HelpText>
+              <Form.Message match="valueMissing">
+                <ErrorMessage>Please enter the HLS address</ErrorMessage>
               </Form.Message>
             </FormField>
 
@@ -229,7 +250,7 @@ export const CreateCameraDialog: React.FC<CreateCameraDialogProps> = ({
             <Form.Submit asChild>
               <SubmitButton
                 type="submit"
-                disabled={!cameraName.trim() || !cameraAddress.trim() || isSubmitting}
+                disabled={!cameraName.trim() || !cameraAddress.trim() || !hlsAddress.trim() || isSubmitting}
                 fullWidth
               >
                 {isSubmitting && <Spinner />}

@@ -100,8 +100,8 @@ const Spinner = styled.div`
 `;
 
 interface CameraPlayerProps {
-  rtspUrl?: string;
-  hlsUrl?: string;
+  rtspUrl: string;
+  hlsUrl: string;
   cameraId: number;
 }
 
@@ -124,84 +124,9 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, hlsUrl, cam
     setIsLoading(true);
     setError(null);
     
-    // If we have a direct HLS URL, use it directly
-    if (hlsUrl) {
-      try {
-        if (videoRef.current) {
-          if (Hls.isSupported()) {
-            const hls = new Hls({
-              enableWorker: true,
-              lowLatencyMode: true,
-              backBufferLength: 60
-            });
-            
-            hls.loadSource(hlsUrl);
-            hls.attachMedia(videoRef.current);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-              videoRef.current?.play().catch(e => {
-                console.error('Error playing video:', e);
-                setError('Failed to play video. Please try again.');
-              });
-              setIsLoading(false);
-              setIsPlaying(true);
-            });
-            
-            hls.on(Hls.Events.ERROR, (event: string, data: HlsEventData) => {
-              if (data.fatal) {
-                console.error('HLS error:', data);
-                setError('Stream playback error. Please try again.');
-                hls.destroy();
-              }
-            });
-            
-            setHlsInstance(hls);
-          } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-            // For Safari which has built-in HLS support
-            videoRef.current.src = hlsUrl;
-            videoRef.current.addEventListener('loadedmetadata', () => {
-              videoRef.current?.play().catch(e => {
-                console.error('Error playing video:', e);
-                setError('Failed to play video. Please try again.');
-              });
-              setIsLoading(false);
-              setIsPlaying(true);
-            });
-          } else {
-            setError('Your browser does not support HLS playback');
-            setIsLoading(false);
-          }
-        }
-        return;
-      } catch (error) {
-        console.error('Error playing direct HLS stream:', error);
-        setError('Failed to play direct HLS stream. Falling back to server stream.');
-        // Continue to try the server stream as fallback
-      }
-    }
-    
-    // If no direct HLS URL or it failed, request stream from backend
+    // Always use the direct HLS URL provided
     try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        setError('Authentication required');
-        setIsLoading(false);
-        return;
-      }
-      
-      const response = await axios.post(
-        `${API_BASE_URL}/api/camera/stream/start`,
-        { cameraId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      setStreamInfo({
-        streamId: response.data.streamId,
-        hlsUrl: response.data.hlsUrl
-      });
-      
-      // Use HLS.js to play the stream if it's supported
-      if (videoRef.current && response.data.hlsUrl) {
+      if (videoRef.current) {
         if (Hls.isSupported()) {
           const hls = new Hls({
             enableWorker: true,
@@ -209,14 +134,15 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, hlsUrl, cam
             backBufferLength: 60
           });
           
-          hls.loadSource(response.data.hlsUrl);
+          hls.loadSource(hlsUrl);
           hls.attachMedia(videoRef.current);
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            setIsLoading(false);
             videoRef.current?.play().catch(e => {
               console.error('Error playing video:', e);
               setError('Failed to play video. Please try again.');
             });
+            setIsLoading(false);
+            setIsPlaying(true);
           });
           
           hls.on(Hls.Events.ERROR, (event: string, data: HlsEventData) => {
@@ -230,48 +156,26 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, hlsUrl, cam
           setHlsInstance(hls);
         } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
           // For Safari which has built-in HLS support
-          videoRef.current.src = response.data.hlsUrl;
+          videoRef.current.src = hlsUrl;
           videoRef.current.addEventListener('loadedmetadata', () => {
-            setIsLoading(false);
             videoRef.current?.play().catch(e => {
               console.error('Error playing video:', e);
               setError('Failed to play video. Please try again.');
             });
+            setIsLoading(false);
+            setIsPlaying(true);
           });
         } else {
           setError('Your browser does not support HLS playback');
           setIsLoading(false);
         }
       }
-      
-      // Start heartbeat to keep stream alive
-      const heartbeatInterval = setInterval(() => {
-        sendHeartbeat(response.data.streamId);
-      }, 30000); // Every 30 seconds
-      
-      setHeartbeatIntervalId(heartbeatInterval);
-      
-      setIsPlaying(true);
     } catch (error) {
-      console.error('Error starting stream:', error);
-      setError('Failed to start stream. Please try again.');
+      console.error('Error playing HLS stream:', error);
+      setError('Failed to play HLS stream. Please try again.');
       setIsLoading(false);
     }
-  }, [cameraId, hlsUrl, isPlaying]);
-
-  // Send heartbeat to keep stream alive
-  const sendHeartbeat = async (streamId: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      await axios.post(
-        `${API_BASE_URL}/api/camera/stream/heartbeat`,
-        { streamId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-    } catch (error) {
-      console.error('Error sending heartbeat:', error);
-    }
-  };
+  }, [hlsUrl, isPlaying]);
 
   // Stop stream
   const stopStream = useCallback(async () => {
@@ -298,8 +202,7 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, hlsUrl, cam
       // Stop stream on server if we have a streamId
       if (streamInfo?.streamId) {
         const token = localStorage.getItem('token');
-        await axios.post(
-          `${API_BASE_URL}/api/camera/stream/stop`,
+        await axios.post(`${API_BASE_URL}/api/camera/stream/stop`, 
           { streamId: streamInfo.streamId },
           { headers: { Authorization: `Bearer ${token}` } }
         );

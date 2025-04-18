@@ -415,6 +415,7 @@ export const CameraView: React.FC = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [cameraName, setCameraName] = useState('');
   const [cameraAddress, setCameraAddress] = useState('');
+  const [hlsAddress, setHlsAddress] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -466,7 +467,7 @@ export const CameraView: React.FC = () => {
 
   const handleCreateCamera = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cameraName.trim() || !cameraAddress.trim() || isSubmitting) return;
+    if (!cameraName.trim() || !cameraAddress.trim() || !hlsAddress.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
@@ -478,7 +479,12 @@ export const CameraView: React.FC = () => {
 
       const response = await axios.post(
         `${API_BASE_URL}/api/camera`, 
-        { cameraName, cameraAddress, homeId: parseInt(homeId || '0') },
+        { 
+          cameraName, 
+          cameraAddress, 
+          hlsAddress,
+          homeId: parseInt(homeId || '0') 
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -486,6 +492,7 @@ export const CameraView: React.FC = () => {
       setShowCreateDialog(false);
       setCameraName('');
       setCameraAddress('');
+      setHlsAddress('');
     } catch (error) {
       console.error('Error creating camera:', error);
       throw error;
@@ -530,6 +537,7 @@ export const CameraView: React.FC = () => {
   const resetCreateDialog = () => {
     setCameraName('');
     setCameraAddress('');
+    setHlsAddress('');
     setShowCreateDialog(false);
   };
 
@@ -688,10 +696,29 @@ export const CameraView: React.FC = () => {
                   </Form.Message>
                 </FormField>
 
+                <FormField name="hlsAddress">
+                  <FormLabel>HLS Address</FormLabel>
+                  <Form.Control asChild>
+                    <FormInput
+                      type="text"
+                      value={hlsAddress}
+                      onChange={(e) => setHlsAddress(e.target.value)}
+                      required
+                      placeholder="hls://username:password@camera-ip:port/stream.m3u8"
+                    />
+                  </Form.Control>
+                  <HelpText>
+                    Enter the HLS URL for your camera. This usually looks like: hls://username:password@camera-ip:port/stream.m3u8
+                  </HelpText>
+                  <Form.Message match="valueMissing">
+                    Please enter the HLS address
+                  </Form.Message>
+                </FormField>
+
                 <Form.Submit asChild>
                   <SubmitButton
                     type="submit"
-                    disabled={!cameraName.trim() || !cameraAddress.trim() || isSubmitting}
+                    disabled={!cameraName.trim() || !cameraAddress.trim() || !hlsAddress.trim() || isSubmitting}
                     fullWidth
                   >
                     {isSubmitting && <Spinner />}
