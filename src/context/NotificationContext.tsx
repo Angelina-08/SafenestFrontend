@@ -169,7 +169,10 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     
     // Set up polling
     const interval = setInterval(() => {
-      fetchNotifications();
+      // Check if we're on a notification detail page
+      if (!window.location.pathname.includes('/notifications/')) {
+        fetchNotifications();
+      }
     }, 10000); // 10 seconds
     
     return () => clearInterval(interval);
