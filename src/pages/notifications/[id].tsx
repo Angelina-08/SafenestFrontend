@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useNotifications, Notification } from '../../contexts/NotificationContext';
+import { useNotifications, Notification } from '../../context/NotificationContext';
 import { format } from 'date-fns';
 import { ArrowLeft } from 'lucide-react';
 import Layout from '../../components/Layout';

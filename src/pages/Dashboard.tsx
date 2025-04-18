@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { HouseCard } from '../components/HouseCard';
 import { CreateHouseDialog } from '../components/CreateHouseDialog';
 import { LoadingSkeleton } from '../components/LoadingSkeleton';

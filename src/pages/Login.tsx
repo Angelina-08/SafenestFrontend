@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthForm } from '../components/AuthForm';
 import { TopBar } from '../components/TopBar';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
 
 export const Login = () => {
   const [error, setError] = useState('');
@@ -20,7 +21,14 @@ export const Login = () => {
     const password = formData.get('password') as string;
 
     try {
-      await login(email, password);
+      const API_BASE_URL = 'https://safe-nest-back-end.vercel.app';
+      const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
+        email,
+        password
+      });
+      
+      const { token, user } = response.data;
+      login(token, user);
       navigate('/dashboard');
     } catch (err: any) {
       console.error('Login error:', err);

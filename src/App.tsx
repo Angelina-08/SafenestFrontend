@@ -14,8 +14,8 @@ import {
   red,
   redDark,
 } from '@radix-ui/colors';
-import { AuthProvider } from './contexts/AuthContext';
-import { NotificationProvider } from './contexts/NotificationContext';
+import { AuthProvider } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 import { Suspense } from 'react';
 import ErrorBoundary from './components/ErrorBoundary';
 import NotificationDetail from './pages/notifications/[id]';

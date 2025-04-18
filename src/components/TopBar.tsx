@@ -4,6 +4,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useNavigate } from 'react-router-dom';
 import { ExitIcon } from '@radix-ui/react-icons';
 import { clearAuthData } from '../utils/auth';
+import { NotificationBell } from './NotificationBell';
 
 const StyledTopBar = styled.div`
   display: flex;
@@ -100,26 +101,29 @@ export const TopBar = ({ firstName, showAvatar = false }: TopBarProps) => {
     <StyledTopBar>
       <Logo src="/assets/logo.png" alt="SafeNest Logo" />
       {showAvatar && (
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger asChild>
-            <AvatarContainer>
-              <StyledAvatar>
-                <StyledAvatarFallback>
-                  {firstName ? firstName[0].toUpperCase() : 'U'}
-                </StyledAvatarFallback>
-              </StyledAvatar>
-            </AvatarContainer>
-          </DropdownMenu.Trigger>
+        <div className="flex items-center space-x-4">
+          <NotificationBell />
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
+              <AvatarContainer>
+                <StyledAvatar>
+                  <StyledAvatarFallback>
+                    {firstName ? firstName[0].toUpperCase() : 'U'}
+                  </StyledAvatarFallback>
+                </StyledAvatar>
+              </AvatarContainer>
+            </DropdownMenu.Trigger>
 
-          <DropdownMenu.Portal>
-            <DropdownContent>
-              <DropdownItem onClick={handleLogout}>
-                <ExitIcon />
-                Logout
-              </DropdownItem>
-            </DropdownContent>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
+            <DropdownMenu.Portal>
+              <DropdownContent>
+                <DropdownItem onClick={handleLogout}>
+                  <ExitIcon />
+                  Logout
+                </DropdownItem>
+              </DropdownContent>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
+        </div>
       )}
     </StyledTopBar>
   );

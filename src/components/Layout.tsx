@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { NotificationBell } from './NotificationBell';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../context/AuthContext';
 
 interface LayoutProps {
   children: ReactNode;

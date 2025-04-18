@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, X } from 'lucide-react';
-import { useNotifications, Notification } from '../contexts/NotificationContext';
+import { useNotifications, Notification } from '../context/NotificationContext';
 import { formatDistanceToNow } from 'date-fns';
 
 export const NotificationBell: React.FC = () => {
