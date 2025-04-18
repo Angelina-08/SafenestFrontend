@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 
@@ -49,50 +49,56 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const unreadCount = notifications.filter(n => n.status === 'unread').length;
 
   // Fetch notifications
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!token) return;
     
-    setLoading(true);
-    setError(null);
-    
     try {
-      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/notifications`, {
+      setLoading(true);
+      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/notifications`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
       
-      setNotifications(response.data.notifications);
+      setNotifications(response.data.notifications || []);
+      setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to fetch notifications');
       console.error('Error fetching notifications:', err);
+      setError('Failed to fetch notifications');
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   // Mark notification as resolved
   const markAsResolved = async (eventId: number) => {
     if (!token) return;
     
     try {
-      await axios.put(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/notifications/${eventId}/status`,
-        { status: 'resolved' },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+      setLoading(true);
+      await axios.put(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/notifications/${eventId}/status`, {
+        status: 'resolved'
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
-      );
+      });
       
       // Update local state
       setNotifications(prev => 
-        prev.map(n => n.event_id === eventId ? { ...n, status: 'resolved' } : n)
+        prev.map(notification => 
+          notification.event_id === eventId 
+            ? { ...notification, status: 'resolved' } 
+            : notification
+        )
       );
+      
+      setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update notification');
-      console.error('Error updating notification:', err);
+      console.error('Error marking notification as resolved:', err);
+      setError('Failed to update notification');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -101,23 +107,30 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     if (!token) return;
     
     try {
-      await axios.put(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/notifications/${eventId}/status`,
-        { status: 'false_alarm' },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+      setLoading(true);
+      await axios.put(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/notifications/${eventId}/status`, {
+        status: 'false_alarm'
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
-      );
+      });
       
       // Update local state
       setNotifications(prev => 
-        prev.map(n => n.event_id === eventId ? { ...n, status: 'false_alarm' } : n)
+        prev.map(notification => 
+          notification.event_id === eventId 
+            ? { ...notification, status: 'false_alarm' } 
+            : notification
+        )
       );
+      
+      setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update notification');
-      console.error('Error updating notification:', err);
+      console.error('Error marking notification as false alarm:', err);
+      setError('Failed to update notification');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -126,27 +139,28 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     if (!token) return null;
     
     try {
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/notifications/${eventId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+      setLoading(true);
+      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/notifications/${eventId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
-      );
+      });
       
-      return response.data.notification;
+      setError(null);
+      return response.data.notification || null;
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to fetch notification details');
       console.error('Error fetching notification details:', err);
+      setError('Failed to fetch notification details');
       return null;
+    } finally {
+      setLoading(false);
     }
   };
 
   // Poll for new notifications every 10 seconds
   useEffect(() => {
     if (!token) return;
-    
+
     // Initial fetch
     fetchNotifications();
     
@@ -156,7 +170,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }, 10000); // 10 seconds
     
     return () => clearInterval(interval);
-  }, [token]);
+  }, [token, fetchNotifications]);
 
   const value = {
     notifications,
