@@ -93,115 +93,116 @@ interface CameraPlayerProps {
   cameraId: number;
 }
 
+// Define JSMpeg types
+declare global {
+  interface Window {
+    JSMpeg: any;
+    streamPlayer: any;
+  }
+}
+
 export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const wsRef = useRef<WebSocket | null>(null);
+  const playerRef = useRef<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [streamInfo, setStreamInfo] = useState<{ streamId: string, streamUrl: string } | null>(null);
 
-  // Function to handle WebSocket connection
-  const connectToWebSocket = useCallback((streamUrl: string) => {
-    if (!canvasRef.current) return;
-    
-    // Parse the URL to get the base URL and stream ID
-    const urlParts = streamUrl.split('/stream/');
-    if (urlParts.length !== 2) {
-      console.error('Invalid stream URL format:', streamUrl);
-      setError('Invalid stream URL format');
-      setIsLoading(false);
-      return;
-    }
-    
-    const baseUrl = urlParts[0];
-    const streamId = urlParts[1];
-    
-    // Create WebSocket URL (convert http to ws, https to wss)
-    const wsProtocol = baseUrl.startsWith('https') ? 'wss' : 'ws';
-    const wsBaseUrl = baseUrl.replace(/^http(s?):\/\//, `${wsProtocol}://`);
-    const wsUrl = `${wsBaseUrl}/stream/${streamId}`;
-    
-    console.log('Connecting to WebSocket:', wsUrl);
-    
-    // Close existing connection if any
-    if (wsRef.current) {
-      wsRef.current.close();
-    }
-    
-    // Create new WebSocket connection
-    const ws = new WebSocket(wsUrl);
-    ws.binaryType = 'arraybuffer';
-    wsRef.current = ws;
-    
-    // Set up canvas
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    
-    if (!ctx) {
-      console.error('Failed to get canvas context');
-      setError('Failed to initialize video player');
-      setIsLoading(false);
-      return;
-    }
-    
-    // Draw initial background
-    ctx.fillStyle = '#333';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.font = '20px Arial';
-    ctx.fillStyle = 'white';
-    ctx.textAlign = 'center';
-    ctx.fillText('Connecting to stream...', canvas.width / 2, canvas.height / 2);
-    
-    // WebSocket event handlers
-    ws.onopen = () => {
-      console.log('WebSocket connection established');
-      setIsLoading(false);
-    };
-    
-    ws.onmessage = (event) => {
-      // Convert ArrayBuffer to Blob
-      const blob = new Blob([event.data], { type: 'image/jpeg' });
-      
-      // Create a URL for the blob
-      const url = URL.createObjectURL(blob);
-      
-      // Create an image element
-      const img = new Image();
-      
-      // When the image loads, draw it on the canvas
-      img.onload = () => {
-        if (!ctx || !canvas) return;
-        
-        // Clear the canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Draw the image on the canvas
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        
-        // Release the blob URL
-        URL.revokeObjectURL(url);
-      };
-      
-      // Set the image source to the blob URL
-      img.src = url;
-    };
-    
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      setError('Error connecting to stream. Please try again.');
-      setIsLoading(false);
-    };
-    
-    ws.onclose = () => {
-      console.log('WebSocket connection closed');
-      if (isPlaying) {
-        setError('Stream connection closed. Please try again.');
+  // Load JSMpeg library
+  const loadJSMpeg = useCallback(() => {
+    return new Promise<void>((resolve, reject) => {
+      if (window.JSMpeg) {
+        resolve();
+        return;
       }
-    };
+      
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/jsmpeg-player@5.0.0/build/jsmpeg.min.js';
+      script.onload = () => resolve();
+      script.onerror = (e) => {
+        console.error('Error loading JSMpeg:', e);
+        reject(new Error('Failed to load video player'));
+      };
+      document.head.appendChild(script);
+    });
+  }, []);
+
+  // Connect to the WebSocket stream
+  const connectToStream = useCallback((streamUrl: string) => {
+    if (!canvasRef.current || !streamInfo) return;
     
-  }, [isPlaying]);
+    try {
+      // Parse the URL to get the base URL and stream ID
+      const urlParts = streamUrl.split('/stream/');
+      if (urlParts.length !== 2) {
+        console.error('Invalid stream URL format:', streamUrl);
+        setError('Invalid stream URL format');
+        setIsLoading(false);
+        return;
+      }
+      
+      const baseUrl = urlParts[0];
+      const streamId = urlParts[1];
+      
+      // Create WebSocket URL (convert http to ws, https to wss)
+      const wsProtocol = baseUrl.startsWith('https') ? 'wss' : 'ws';
+      const wsBaseUrl = baseUrl.replace(/^http(s?):\/\//, `${wsProtocol}://`);
+      const wsUrl = `${wsBaseUrl}/api/${streamId}`;
+      
+      console.log('Connecting to WebSocket stream:', wsUrl);
+      
+      // Create JSMpeg player
+      if (window.JSMpeg) {
+        // Clean up existing player if any
+        if (playerRef.current) {
+          playerRef.current.destroy();
+        }
+        
+        // Create new player
+        playerRef.current = new window.JSMpeg.Player(wsUrl, {
+          canvas: canvasRef.current,
+          autoplay: true,
+          audio: false,
+          loop: false,
+          onPlay: () => {
+            console.log('Stream playback started');
+            setIsLoading(false);
+          },
+          onStalled: () => {
+            console.log('Stream stalled');
+          },
+          onEnded: () => {
+            console.log('Stream ended');
+            setError('Stream ended unexpectedly. Please try again.');
+          }
+        });
+        
+        console.log('JSMpeg player created');
+        
+        // Send heartbeat to keep stream alive
+        const heartbeatInterval = setInterval(() => {
+          if (streamInfo) {
+            fetch(`${baseUrl}/stream/${streamId}/heartbeat`, { 
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' }
+            }).catch(err => console.error('Heartbeat error:', err));
+          }
+        }, 30000); // every 30 seconds
+        
+        // Store interval for cleanup
+        playerRef.current.heartbeatInterval = heartbeatInterval;
+      } else {
+        setError('Video player not available');
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('Error connecting to stream:', error);
+      setError('Failed to connect to stream. Please try again.');
+      setIsLoading(false);
+    }
+  }, [streamInfo]);
 
   // Start stream when component mounts or when play is clicked
   const startStream = useCallback(async () => {
@@ -217,6 +218,9 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
         setIsLoading(false);
         return;
       }
+
+      // Load JSMpeg library first
+      await loadJSMpeg();
 
       // Request stream from backend
       console.log('Sending request to:', `${API_BASE_URL}/api/camera/stream/start`);
@@ -245,8 +249,8 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
         streamUrl: streamUrl
       });
       
-      // Connect to WebSocket for streaming
-      connectToWebSocket(streamUrl);
+      // Connect to the stream
+      connectToStream(streamUrl);
       
       setIsPlaying(true);
     } catch (error) {
@@ -258,7 +262,7 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
       setError('Failed to start camera stream. Please try again.');
       setIsLoading(false);
     }
-  }, [cameraId, connectToWebSocket]);
+  }, [cameraId, loadJSMpeg, connectToStream]);
 
   // Stop stream when component unmounts or when pause is clicked
   const stopStream = useCallback(async () => {
@@ -268,10 +272,16 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      // Close WebSocket connection
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
+      // Clean up player
+      if (playerRef.current) {
+        // Clear heartbeat interval
+        if (playerRef.current.heartbeatInterval) {
+          clearInterval(playerRef.current.heartbeatInterval);
+        }
+        
+        // Destroy player
+        playerRef.current.destroy();
+        playerRef.current = null;
       }
 
       // Request stream termination from backend
@@ -283,15 +293,6 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
       
       setIsPlaying(false);
       setStreamInfo(null);
-      
-      // Clear the canvas
-      if (canvasRef.current) {
-        const ctx = canvasRef.current.getContext('2d');
-        if (ctx) {
-          ctx.fillStyle = '#000';
-          ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-        }
-      }
     } catch (error) {
       console.error('Error stopping stream:', error);
       // Even if there's an error, we still want to update the UI
@@ -313,14 +314,6 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
       }
     };
   }, [streamInfo, startStream, stopStream]);
-
-  // Set up canvas dimensions
-  useEffect(() => {
-    if (canvasRef.current) {
-      canvasRef.current.width = 640;
-      canvasRef.current.height = 480;
-    }
-  }, []);
 
   const handlePlay = () => {
     startStream();
