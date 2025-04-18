@@ -149,7 +149,7 @@ interface EditCameraDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   camera: Camera;
-  onUpdateCamera: (id: number, cameraName: string, cameraAddress: string) => Promise<void>;
+  onUpdateCamera: (id: number, cameraName: string, cameraAddress: string, hlsAddress: string) => Promise<void>;
 }
 
 export const EditCameraDialog: React.FC<EditCameraDialogProps> = ({
@@ -160,6 +160,7 @@ export const EditCameraDialog: React.FC<EditCameraDialogProps> = ({
 }) => {
   const [cameraName, setCameraName] = useState('');
   const [cameraAddress, setCameraAddress] = useState('');
+  const [hlsAddress, setHlsAddress] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>('');
 
@@ -167,6 +168,7 @@ export const EditCameraDialog: React.FC<EditCameraDialogProps> = ({
     if (open && camera) {
       setCameraName(camera.cameraName);
       setCameraAddress(camera.cameraAddress);
+      setHlsAddress(camera.hlsAddress || '');
     }
   }, [open, camera]);
 
@@ -176,7 +178,7 @@ export const EditCameraDialog: React.FC<EditCameraDialogProps> = ({
 
     setIsSubmitting(true);
     try {
-      await onUpdateCamera(camera.cameraId, cameraName, cameraAddress);
+      await onUpdateCamera(camera.cameraId, cameraName, cameraAddress, hlsAddress);
       onOpenChange(false);
     } catch (error) {
       console.error('Error updating camera:', error);
@@ -205,11 +207,10 @@ export const EditCameraDialog: React.FC<EditCameraDialogProps> = ({
                   value={cameraName}
                   onChange={(e) => setCameraName(e.target.value)}
                   required
-                  placeholder="Enter camera name"
                 />
               </Form.Control>
               <Form.Message match="valueMissing">
-                Please enter a camera name
+                <ErrorMessage>Camera name is required</ErrorMessage>
               </Form.Message>
             </FormField>
 
@@ -221,29 +222,34 @@ export const EditCameraDialog: React.FC<EditCameraDialogProps> = ({
                   value={cameraAddress}
                   onChange={(e) => setCameraAddress(e.target.value)}
                   required
-                  placeholder="rtsp://username:password@camera-ip:port/stream"
+                  placeholder="rtsp://username:password@camera-ip:port/path"
                 />
               </Form.Control>
-              <HelpText>
-                Enter the RTSP URL for your camera. This usually looks like: rtsp://username:password@camera-ip:port/stream
-              </HelpText>
               <Form.Message match="valueMissing">
-                Please enter the RTSP address
+                <ErrorMessage>RTSP address is required</ErrorMessage>
               </Form.Message>
+              <HelpText>The RTSP stream URL for your camera</HelpText>
+            </FormField>
+
+            <FormField name="hlsAddress">
+              <FormLabel>HLS Address (Optional)</FormLabel>
+              <Form.Control asChild>
+                <FormInput
+                  type="text"
+                  value={hlsAddress}
+                  onChange={(e) => setHlsAddress(e.target.value)}
+                  placeholder="http://camera-ip:port/stream.m3u8"
+                />
+              </Form.Control>
+              <HelpText>If your camera provides a direct HLS stream, enter it here for better web playback</HelpText>
             </FormField>
 
             {error && <ErrorMessage>{error}</ErrorMessage>}
 
-            <Form.Submit asChild>
-              <SubmitButton
-                type="submit"
-                disabled={!cameraName.trim() || !cameraAddress.trim() || isSubmitting}
-                fullWidth
-              >
-                {isSubmitting && <Spinner />}
-                {isSubmitting ? 'Updating...' : 'Update Camera'}
-              </SubmitButton>
-            </Form.Submit>
+            <SubmitButton type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Spinner />}
+              {isSubmitting ? 'Updating...' : 'Update Camera'}
+            </SubmitButton>
           </StyledForm>
         </StyledContent>
       </Dialog.Portal>

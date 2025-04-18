@@ -8,7 +8,6 @@ import { LoadingSkeleton } from '../components/LoadingSkeleton';
 import { CameraPlayer } from '../components/CameraPlayer';
 import { EditCameraDialog } from '../components/EditCameraDialog';
 import { Button } from '../components/Button';
-import { Camera } from '../types/Camera';
 import { ArrowLeftIcon, Pencil1Icon } from '@radix-ui/react-icons';
 
 const API_BASE_URL = 'https://safe-nest-back-end.vercel.app';
@@ -88,8 +87,18 @@ const ButtonGroup = styled.div`
   margin-top: 1rem;
 `;
 
+interface CameraData {
+  cameraId: number;
+  cameraName: string;
+  cameraAddress: string;
+  hlsAddress: string;
+  homeId: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const CameraDetail: React.FC = () => {
-  const [camera, setCamera] = useState<Camera | null>(null);
+  const [camera, setCamera] = useState<CameraData | null>(null);
   const [houseName, setHouseName] = useState<string>('');
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -143,7 +152,7 @@ export const CameraDetail: React.FC = () => {
     }
   }, [user, authLoading, navigate, fetchCamera]);
 
-  const handleUpdateCamera = async (id: number, cameraName: string, cameraAddress: string) => {
+  const handleUpdateCamera = async (id: number, cameraName: string, cameraAddress: string, hlsAddress: string) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -153,7 +162,7 @@ export const CameraDetail: React.FC = () => {
 
       const response = await axios.put(
         `${API_BASE_URL}/api/camera/${id}`, 
-        { cameraName, cameraAddress },
+        { cameraName, cameraAddress, hlsAddress },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -210,7 +219,11 @@ export const CameraDetail: React.FC = () => {
         </Header>
 
         <PlayerSection>
-          <CameraPlayer rtspUrl={camera.cameraAddress} cameraId={camera.cameraId} />
+          <CameraPlayer 
+            rtspUrl={camera.cameraAddress} 
+            hlsUrl={camera.hlsAddress}
+            cameraId={camera.cameraId} 
+          />
         </PlayerSection>
 
         <CameraInfo>
@@ -223,8 +236,20 @@ export const CameraDetail: React.FC = () => {
             <InfoValue>{camera.cameraAddress}</InfoValue>
           </InfoRow>
           <InfoRow>
+            <InfoLabel>HLS Address:</InfoLabel>
+            <InfoValue>{camera.hlsAddress || 'Not set'}</InfoValue>
+          </InfoRow>
+          <InfoRow>
             <InfoLabel>House:</InfoLabel>
             <InfoValue>{houseName}</InfoValue>
+          </InfoRow>
+          <InfoRow>
+            <InfoLabel>Created:</InfoLabel>
+            <InfoValue>{new Date(camera.createdAt).toLocaleString()}</InfoValue>
+          </InfoRow>
+          <InfoRow>
+            <InfoLabel>Updated:</InfoLabel>
+            <InfoValue>{new Date(camera.updatedAt).toLocaleString()}</InfoValue>
           </InfoRow>
 
           <ButtonGroup>

@@ -3,6 +3,23 @@ import styled from 'styled-components';
 import { Button } from './Button';
 import { PlayIcon, PauseIcon, ReloadIcon } from '@radix-ui/react-icons';
 import axios from 'axios';
+// Import Hls.js types
+import Hls from 'hls.js';
+
+// Define types for Hls.js events
+interface HlsEventData {
+  type?: string;
+  details?: string;
+  fatal?: boolean;
+  [key: string]: any;
+}
+
+// Define HLS.js types
+declare global {
+  interface Window {
+    Hls: typeof Hls;
+  }
+}
 
 const API_BASE_URL = 'https://safe-nest-back-end.vercel.app';
 
@@ -83,214 +100,256 @@ const Spinner = styled.div`
 `;
 
 interface CameraPlayerProps {
-  rtspUrl: string;
+  rtspUrl?: string;
+  hlsUrl?: string;
   cameraId: number;
 }
 
-export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId }) => {
+export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, hlsUrl, cameraId }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [streamInfo, setStreamInfo] = useState<{ streamId: string, streamUrl: string } | null>(null);
+  const [streamInfo, setStreamInfo] = useState<{ 
+    streamId: string, 
+    hlsUrl: string
+  } | null>(null);
+  const [hlsInstance, setHlsInstance] = useState<Hls | null>(null);
+  const [heartbeatIntervalId, setHeartbeatIntervalId] = useState<NodeJS.Timeout | null>(null);
 
   // Start stream when component mounts or when play is clicked
   const startStream = useCallback(async () => {
+    if (isPlaying) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    // If we have a direct HLS URL, use it directly
+    if (hlsUrl) {
+      try {
+        if (videoRef.current) {
+          if (Hls.isSupported()) {
+            const hls = new Hls({
+              enableWorker: true,
+              lowLatencyMode: true,
+              backBufferLength: 60
+            });
+            
+            hls.loadSource(hlsUrl);
+            hls.attachMedia(videoRef.current);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+              videoRef.current?.play().catch(e => {
+                console.error('Error playing video:', e);
+                setError('Failed to play video. Please try again.');
+              });
+              setIsLoading(false);
+              setIsPlaying(true);
+            });
+            
+            hls.on(Hls.Events.ERROR, (event: string, data: HlsEventData) => {
+              if (data.fatal) {
+                console.error('HLS error:', data);
+                setError('Stream playback error. Please try again.');
+                hls.destroy();
+              }
+            });
+            
+            setHlsInstance(hls);
+          } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+            // For Safari which has built-in HLS support
+            videoRef.current.src = hlsUrl;
+            videoRef.current.addEventListener('loadedmetadata', () => {
+              videoRef.current?.play().catch(e => {
+                console.error('Error playing video:', e);
+                setError('Failed to play video. Please try again.');
+              });
+              setIsLoading(false);
+              setIsPlaying(true);
+            });
+          } else {
+            setError('Your browser does not support HLS playback');
+            setIsLoading(false);
+          }
+        }
+        return;
+      } catch (error) {
+        console.error('Error playing direct HLS stream:', error);
+        setError('Failed to play direct HLS stream. Falling back to server stream.');
+        // Continue to try the server stream as fallback
+      }
+    }
+    
+    // If no direct HLS URL or it failed, request stream from backend
     try {
-      setIsLoading(true);
-      setError(null);
-      
-      console.log('Starting stream for camera ID:', cameraId);
-      
       const token = localStorage.getItem('token');
+      
       if (!token) {
-        setError('Authentication error. Please log in again.');
+        setError('Authentication required');
         setIsLoading(false);
         return;
       }
-
-      // Request stream from backend
-      console.log('Sending request to:', `${API_BASE_URL}/api/camera/stream/start`);
+      
       const response = await axios.post(
         `${API_BASE_URL}/api/camera/stream/start`,
         { cameraId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      console.log('Stream response:', response.data);
+      setStreamInfo({
+        streamId: response.data.streamId,
+        hlsUrl: response.data.hlsUrl
+      });
       
-      // Make sure the streamUrl is a complete URL
-      let streamUrl = response.data.streamUrl;
-      
-      // If the URL doesn't start with http, assume it's a path and prepend the MJPEG server URL
-      if (!streamUrl.startsWith('http')) {
-        // Extract the MJPEG server URL from the response if possible
-        const baseUrl = response.data.streamUrl.split('/stream/')[0] || 'http://56.228.7.181:3000';
-        streamUrl = `${baseUrl}${streamUrl}`;
-      }
-      
-      console.log('Final stream URL:', streamUrl);
-      
-      // Handle HTTPS to HTTP mixed content issue
-      if (window.location.protocol === 'https:' && streamUrl.startsWith('http:')) {
-        console.warn('Mixed content detected: Streaming server is HTTP but frontend is HTTPS');
-        
-        // Option 1: Try to use relative URL if on same domain
-        if (streamUrl.includes(window.location.hostname)) {
-          streamUrl = streamUrl.replace(/^http:\/\/[^\/]+/, '');
-          console.log('Using relative URL:', streamUrl);
-        } 
-        // Option 2: Show warning to user
-        else {
-          setError(
-            'Secure connection issue: Your browser is blocking the stream because it uses an insecure connection. ' +
-            'Please try accessing this page using HTTP instead of HTTPS, or configure your streaming server with SSL.'
-          );
+      // Use HLS.js to play the stream if it's supported
+      if (videoRef.current && response.data.hlsUrl) {
+        if (Hls.isSupported()) {
+          const hls = new Hls({
+            enableWorker: true,
+            lowLatencyMode: true,
+            backBufferLength: 60
+          });
+          
+          hls.loadSource(response.data.hlsUrl);
+          hls.attachMedia(videoRef.current);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            setIsLoading(false);
+            videoRef.current?.play().catch(e => {
+              console.error('Error playing video:', e);
+              setError('Failed to play video. Please try again.');
+            });
+          });
+          
+          hls.on(Hls.Events.ERROR, (event: string, data: HlsEventData) => {
+            if (data.fatal) {
+              console.error('HLS error:', data);
+              setError('Stream playback error. Please try again.');
+              hls.destroy();
+            }
+          });
+          
+          setHlsInstance(hls);
+        } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+          // For Safari which has built-in HLS support
+          videoRef.current.src = response.data.hlsUrl;
+          videoRef.current.addEventListener('loadedmetadata', () => {
+            setIsLoading(false);
+            videoRef.current?.play().catch(e => {
+              console.error('Error playing video:', e);
+              setError('Failed to play video. Please try again.');
+            });
+          });
+        } else {
+          setError('Your browser does not support HLS playback');
           setIsLoading(false);
-          return;
         }
       }
       
-      setStreamInfo({
-        streamId: response.data.streamId,
-        streamUrl: streamUrl
-      });
+      // Start heartbeat to keep stream alive
+      const heartbeatInterval = setInterval(() => {
+        sendHeartbeat(response.data.streamId);
+      }, 30000); // Every 30 seconds
       
-      // The stream will be loaded in an iframe
-      setIsLoading(false);
+      setHeartbeatIntervalId(heartbeatInterval);
+      
       setIsPlaying(true);
     } catch (error) {
       console.error('Error starting stream:', error);
-      if (axios.isAxiosError(error)) {
-        console.error('Response data:', error.response?.data);
-        console.error('Response status:', error.response?.status);
-      }
-      setError('Failed to start camera stream. Please try again.');
+      setError('Failed to start stream. Please try again.');
       setIsLoading(false);
     }
-  }, [cameraId]);
+  }, [cameraId, hlsUrl, isPlaying]);
 
-  // Stop stream when component unmounts or when pause is clicked
-  const stopStream = useCallback(async () => {
-    if (!streamInfo) return;
-    
+  // Send heartbeat to keep stream alive
+  const sendHeartbeat = async (streamId: string) => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) return;
-
-      // Request stream termination from backend
       await axios.post(
-        `${API_BASE_URL}/api/camera/stream/stop`,
-        { streamId: streamInfo.streamId },
+        `${API_BASE_URL}/api/camera/stream/heartbeat`,
+        { streamId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
-      setIsPlaying(false);
-      setStreamInfo(null);
     } catch (error) {
-      console.error('Error stopping stream:', error);
-      // Even if there's an error, we still want to update the UI
-      setIsPlaying(false);
+      console.error('Error sending heartbeat:', error);
     }
-  }, [streamInfo]);
+  };
 
-  // Start/stop stream based on isPlaying state
-  useEffect(() => {
-    // Auto-start the stream when component mounts
-    if (!streamInfo) {
-      startStream();
-    }
+  // Stop stream
+  const stopStream = useCallback(async () => {
+    if (!isPlaying) return;
     
-    return () => {
-      // Clean up stream when component unmounts
-      if (streamInfo) {
-        stopStream();
+    try {
+      // Clean up HLS player
+      if (hlsInstance) {
+        hlsInstance.destroy();
+        setHlsInstance(null);
       }
-    };
-  }, [streamInfo, startStream, stopStream]);
-
-  // Send heartbeat to keep the stream alive via the backend
-  useEffect(() => {
-    if (!streamInfo) return;
-    
-    const heartbeatInterval = setInterval(async () => {
-      try {
+      
+      if (videoRef.current) {
+        videoRef.current.pause();
+        videoRef.current.src = '';
+      }
+      
+      // Clear heartbeat interval
+      if (heartbeatIntervalId) {
+        clearInterval(heartbeatIntervalId);
+        setHeartbeatIntervalId(null);
+      }
+      
+      // Stop stream on server if we have a streamId
+      if (streamInfo?.streamId) {
         const token = localStorage.getItem('token');
-        if (!token) return;
-        
-        // Send heartbeat through our backend instead of directly to streaming server
         await axios.post(
-          `${API_BASE_URL}/api/camera/stream/heartbeat`,
+          `${API_BASE_URL}/api/camera/stream/stop`,
           { streamId: streamInfo.streamId },
           { headers: { Authorization: `Bearer ${token}` } }
         );
-      } catch (err) {
-        console.error('Heartbeat error:', err);
+        setStreamInfo(null);
       }
-    }, 30000); // every 30 seconds
-    
-    return () => {
-      clearInterval(heartbeatInterval);
-    };
-  }, [streamInfo]);
+    } catch (error) {
+      console.error('Error stopping stream:', error);
+    } finally {
+      // Even if there's an error, we still want to update the UI
+      setIsPlaying(false);
+    }
+  }, [streamInfo, hlsInstance, heartbeatIntervalId, isPlaying]);
 
-  const handlePlay = () => {
-    startStream();
-  };
-
-  const handlePause = () => {
-    stopStream();
-  };
-
-  const handleReload = () => {
-    if (streamInfo) {
+  // Start/stop stream based on isPlaying state
+  useEffect(() => {
+    if (isPlaying) {
+      startStream();
+    } else {
       stopStream();
     }
-    setTimeout(() => {
-      startStream();
-    }, 500);
+  }, [isPlaying, startStream, stopStream]);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      stopStream();
+    };
+  }, [stopStream]);
+
+  // Toggle play/pause
+  const togglePlayback = () => {
+    setIsPlaying(!isPlaying);
   };
 
-  // Handle iframe load events
-  const handleIframeLoad = () => {
-    setIsLoading(false);
-  };
-
-  const handleIframeError = () => {
-    setError('Failed to load stream. Please try again.');
-    setIsLoading(false);
+  // Restart stream
+  const restartStream = () => {
+    stopStream().then(() => {
+      setIsPlaying(true);
+    });
   };
 
   return (
     <PlayerContainer>
-      {streamInfo ? (
-        <>
-          <iframe
-            ref={iframeRef}
-            src={streamInfo.streamUrl}
-            style={{ 
-              width: '100%', 
-              height: '100%', 
-              border: 'none',
-              backgroundColor: '#000'
-            }}
-            onLoad={handleIframeLoad}
-            onError={handleIframeError}
-            title="Camera Stream"
-            allow="autoplay"
-            sandbox="allow-same-origin allow-scripts"
-          />
-          <div style={{ position: 'absolute', top: 5, right: 5, background: 'rgba(0,0,0,0.5)', color: 'white', padding: '2px 5px', borderRadius: 3, fontSize: 12 }}>
-            Stream ID: {streamInfo.streamId.substring(0, 8)}...
-          </div>
-        </>
-      ) : (
-        <VideoElement 
-          ref={videoRef}
-          playsInline
-        />
-      )}
+      <VideoElement 
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        controls
+      />
       
       {isLoading && (
         <LoadingOverlay>
@@ -301,7 +360,7 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
       {error && (
         <ErrorOverlay>
           <p>{error}</p>
-          <Button onClick={handleReload} variant="secondary" size="small">
+          <Button onClick={restartStream} variant="secondary" size="small">
             <ReloadIcon /> Try Again
           </Button>
         </ErrorOverlay>
@@ -310,15 +369,15 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({ rtspUrl, cameraId })
       {!isLoading && !error && (
         <PlayerControls>
           {isPlaying ? (
-            <Button onClick={handlePause} variant="secondary" size="small">
+            <Button onClick={togglePlayback} variant="secondary" size="small">
               <PauseIcon /> Pause
             </Button>
           ) : (
-            <Button onClick={handlePlay} variant="secondary" size="small">
+            <Button onClick={togglePlayback} variant="secondary" size="small">
               <PlayIcon /> Play
             </Button>
           )}
-          <Button onClick={handleReload} variant="secondary" size="small">
+          <Button onClick={restartStream} variant="secondary" size="small">
             <ReloadIcon /> Reload
           </Button>
         </PlayerControls>
