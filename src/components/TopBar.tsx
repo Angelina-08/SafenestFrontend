@@ -43,6 +43,13 @@ const StyledAvatarFallback = styled(Avatar.Fallback)`
   font-weight: 500;
 `;
 
+// Wrapper for user actions: notification bell and avatar
+const UserMenu = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+`;
+
 const DropdownContent = styled(DropdownMenu.Content)`
   min-width: 180px;
   background-color: white;
@@ -101,7 +108,7 @@ export const TopBar = ({ firstName, showAvatar = false }: TopBarProps) => {
     <StyledTopBar>
       <Logo src="/assets/logo.png" alt="SafeNest Logo" />
       {showAvatar && (
-        <div className="flex items-center space-x-4">
+        <UserMenu>
           <NotificationBell />
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
@@ -123,7 +130,7 @@ export const TopBar = ({ firstName, showAvatar = false }: TopBarProps) => {
               </DropdownContent>
             </DropdownMenu.Portal>
           </DropdownMenu.Root>
-        </div>
+        </UserMenu>
       )}
     </StyledTopBar>
   );

@@ -36,11 +36,15 @@ export const NotificationBell: React.FC = () => {
       <Popover.Portal>
         <Popover.Content
           side="right"
-          align="center"
-          sideOffset={10}
-          className="w-80 bg-white shadow-lg rounded-md z-50"
-          style={{ backgroundColor: 'rgba(255, 255, 255, 1)' }}
+          align="start"
+          sideOffset={8}
+          className="w-80 rounded-md z-50"
+          style={{
+            backgroundColor: 'rgba(255,255,255,0.95)',
+            boxShadow: '0px 10px 15px -3px rgba(0,0,0,0.1), 0px 4px 6px -2px rgba(0,0,0,0.05)'
+          }}
         >
+          <Popover.Arrow offset={12} className="fill-current text-white" />
           <div className="flex items-center justify-between p-4 border-b">
             <h3 className="font-semibold">Notifications</h3>
             <Popover.Close asChild>
